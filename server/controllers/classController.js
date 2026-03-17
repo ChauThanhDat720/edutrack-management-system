@@ -11,21 +11,29 @@ const parseGrade = (className) => {
 // @desc    Create a new class (auto-assigns matching unassigned students)
 // @route   POST /api/classes
 // @access  Admin
+const { generateSemester } = require('../services/sessionService'); // Đảm bảo import đúng
+const moment = require('moment');
+
 exports.createClass = async (req, res) => {
     try {
         const { className, teacher, room, schedule } = req.body;
 
+        // 1. Tạo lớp học mới trong DB
         const newClass = await Class.create({ className, teacher, room, schedule });
 
-        // ── Auto-assign logic ─────────────────────────────────────────────────
+        // 2. Tự động rải lịch dạy cho cả học kỳ (Ví dụ: 4 tháng kể từ hôm nay)
+        // Bạn có thể tùy chỉnh ngày bắt đầu/kết thúc từ req.body nếu muốn
+        const startDate = moment().startOf('day');
+        const endDate = moment().add(4, 'months').endOf('month');
+
+        const createdSessions = await generateSemester(newClass, startDate, endDate);
+
+        // ── Auto-assign học sinh dựa trên khối (Grade) ────────────────────────
         const grade = parseGrade(className);
         let autoAssignedCount = 0;
 
         if (grade !== null) {
-            // Find all students who:
-            //  1. Are role: 'student'
-            //  2. Have studentDetails.grade matching the parsed grade
-            //  3. Have no class assigned yet (studentDetails.class is null/undefined)
+            // Tìm học sinh cùng khối và chưa có lớp
             const unassignedStudents = await User.find({
                 role: 'student',
                 'studentDetails.grade': grade,
@@ -38,13 +46,13 @@ exports.createClass = async (req, res) => {
             if (unassignedStudents.length > 0) {
                 const studentIds = unassignedStudents.map(s => s._id);
 
-                // 1. Update all matched students to point to this new class
+                // Cập nhật lớp cho học sinh
                 await User.updateMany(
                     { _id: { $in: studentIds } },
                     { $set: { 'studentDetails.class': newClass._id } }
                 );
 
-                // 2. Push all their IDs into Class.students (addToSet avoids dupes)
+                // Đưa ID học sinh vào mảng students của Class
                 await Class.findByIdAndUpdate(newClass._id, {
                     $addToSet: { students: { $each: studentIds } }
                 });
@@ -54,20 +62,22 @@ exports.createClass = async (req, res) => {
         }
         // ─────────────────────────────────────────────────────────────────────
 
+        // Lấy dữ liệu lớp đã đầy đủ thông tin để trả về Client
         const populated = await Class.findById(newClass._id)
             .populate('teacher', 'name email role')
             .populate('students', 'name email studentDetails.studentId');
 
         res.status(201).json({
             success: true,
-            message: `Tạo lớp thành công. Đã tự động xếp ${autoAssignedCount} học sinh khối ${grade ?? '?'} vào lớp.`,
+            message: `Tạo lớp thành công. Đã sinh ${createdSessions.length} buổi học và tự động xếp ${autoAssignedCount} học sinh vào lớp.`,
             data: populated
         });
+
     } catch (error) {
+        console.error("Lỗi createClass:", error);
         res.status(400).json({ success: false, message: error.message });
     }
 };
-
 // @desc    Get all classes with teacher info
 // @route   GET /api/classes
 // @access  Admin, Teacher
