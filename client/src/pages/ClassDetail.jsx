@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, UserMinus, UserPlus, Search, Users, BookOpen } from 'lucide-react';
+import { ArrowLeft, UserMinus, UserPlus, Search, Users, BookOpen, Clock, Calendar } from 'lucide-react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -130,6 +130,51 @@ const ClassDetail = () => {
             )}
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* ── Sessions Panel ── */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+                    <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                        <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                            <Clock size={18} className="text-orange-500" />
+                            Lịch sử buổi học
+                        </h2>
+                        <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+                            {classData.schedule?.length || 0} buổi/tuần
+                        </span>
+                    </div>
+                    <div className="p-5 flex-1 max-h-[420px] overflow-y-auto">
+                        {!classData.schedule || classData.schedule.length === 0 ? (
+                            <div className="text-center py-10 text-gray-400">
+                                <Calendar size={36} className="mx-auto mb-2 opacity-40" />
+                                <p className="text-sm">Chưa có lịch học nào</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {classData.schedule.map((session, idx) => (
+                                    <div key={idx} className="flex flex-col gap-2 p-4 bg-gray-50 border border-gray-100 rounded-lg hover:border-orange-200 transition-colors">
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm font-bold text-gray-800">{session.dayOfWeek}</span>
+                                                <span className="text-xs font-medium bg-gray-200 text-gray-600 px-2 py-0.5 rounded">
+                                                    {session.startTime} - {session.endTime}
+                                                </span>
+                                            </div>
+                                            {/* Temporary Session Mock ID based on class ID and index for demo */}
+                                            {user?.role === 'teacher' || user?.role === 'admin' ? (
+                                                <button
+                                                    onClick={() => navigate(`sessions/${classData._id}_${idx}/attendance`)}
+                                                    className="text-xs font-semibold bg-orange-100 text-orange-700 hover:bg-orange-600 hover:text-white px-3 py-1.5 rounded transition-colors"
+                                                >
+                                                    Điểm danh
+                                                </button>
+                                            ) : null}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
                 {/* ── Current Students Panel ── */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                     <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">

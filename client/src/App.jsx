@@ -10,6 +10,8 @@ import CreateAnnouncement from './pages/CreateAnnouncement';
 import UserManagement from './pages/UserManagement';
 import ClassManagement from './pages/ClassManagement';
 import ClassDetail from './pages/ClassDetail';
+import SessionAttendance from './pages/SessionAttendance';
+import StudentSchedule from './pages/StudentSchedule';
 
 // ─── Base Protected Route ────────────────────────────────────────────────────
 // Checks only that the user is authenticated (any role)
@@ -101,6 +103,7 @@ function App() {
             <Route path="users" element={<UserManagement />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="classes/:id" element={<ClassDetail />} />
+            <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
           </Route>
 
           {/* ── Teacher-only routes ── */}
@@ -115,6 +118,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="classes/:id" element={<ClassDetail />} />
+            <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
           </Route>
 
           {/* ── Student-only routes ── */}
@@ -129,6 +133,7 @@ function App() {
             <Route index element={<Dashboard />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="classes/:id" element={<ClassDetail />} />
+            <Route path="schedule" element={<StudentSchedule />} />
           </Route>
 
           {/* Fallback */}

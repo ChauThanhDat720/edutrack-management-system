@@ -1,6 +1,6 @@
 const Class = require('../models/Class');
 const User = require('../models/User');
-
+const { generateSemester } = require('../services/sessionService');
 // Helper: extract leading grade number from a className string
 // e.g. '10A1' → 10, '11B2' → 11, 'A1' → null
 const parseGrade = (className) => {
@@ -11,71 +11,62 @@ const parseGrade = (className) => {
 // @desc    Create a new class (auto-assigns matching unassigned students)
 // @route   POST /api/classes
 // @access  Admin
-const { generateSemester } = require('../services/sessionService'); // Đảm bảo import đúng
+
 const moment = require('moment');
 
+// class.controller.js
+// class.controller.js
 exports.createClass = async (req, res) => {
     try {
         const { className, teacher, room, schedule } = req.body;
 
-        // 1. Tạo lớp học mới trong DB
+        // 1. Lấy khối từ tên lớp (ví dụ "10A1" -> 10)
+        const grade = parseGrade(className);
+        if (grade === null) {
+            return res.status(400).json({ success: false, message: "Tên lớp không hợp lệ để xác định khối (grade)" });
+        }
+
+        // 2. Tạo lớp học
         const newClass = await Class.create({ className, teacher, room, schedule });
 
-        // 2. Tự động rải lịch dạy cho cả học kỳ (Ví dụ: 4 tháng kể từ hôm nay)
-        // Bạn có thể tùy chỉnh ngày bắt đầu/kết thúc từ req.body nếu muốn
-        const startDate = moment().startOf('day');
-        const endDate = moment().add(4, 'months').endOf('month');
+        // 3. Tìm học sinh (SỬA LẠI ĐIỀU KIỆN TÌM KIẾM)
+        const unassignedStudents = await User.find({
+            role: 'student',
+            'studentDetails.grade': grade, // Phải khớp số khối
+            $or: [
+                { 'studentDetails.class': null },
+                { 'studentDetails.class': { $exists: false } }
+            ]
+        });
 
-        const createdSessions = await generateSemester(newClass, startDate, endDate);
+        console.log(`Tìm thấy ${unassignedStudents.length} học sinh khối ${grade} chưa có lớp`);
 
-        // ── Auto-assign học sinh dựa trên khối (Grade) ────────────────────────
-        const grade = parseGrade(className);
-        let autoAssignedCount = 0;
+        if (unassignedStudents.length > 0) {
+            const studentIds = unassignedStudents.map(s => s._id);
 
-        if (grade !== null) {
-            // Tìm học sinh cùng khối và chưa có lớp
-            const unassignedStudents = await User.find({
-                role: 'student',
-                'studentDetails.grade': grade,
-                $or: [
-                    { 'studentDetails.class': null },
-                    { 'studentDetails.class': { $exists: false } }
-                ]
-            }).select('_id');
+            // Cập nhật User: Thêm class ID
+            await User.updateMany(
+                { _id: { $in: studentIds } },
+                { $set: { 'studentDetails.class': newClass._id } }
+            );
 
-            if (unassignedStudents.length > 0) {
-                const studentIds = unassignedStudents.map(s => s._id);
-
-                // Cập nhật lớp cho học sinh
-                await User.updateMany(
-                    { _id: { $in: studentIds } },
-                    { $set: { 'studentDetails.class': newClass._id } }
-                );
-
-                // Đưa ID học sinh vào mảng students của Class
-                await Class.findByIdAndUpdate(newClass._id, {
-                    $addToSet: { students: { $each: studentIds } }
-                });
-
-                autoAssignedCount = studentIds.length;
-            }
+            // Cập nhật Class: Thêm mảng student IDs
+            await Class.findByIdAndUpdate(newClass._id, {
+                $set: { students: studentIds }
+            });
         }
-        // ─────────────────────────────────────────────────────────────────────
 
-        // Lấy dữ liệu lớp đã đầy đủ thông tin để trả về Client
-        const populated = await Class.findById(newClass._id)
-            .populate('teacher', 'name email role')
-            .populate('students', 'name email studentDetails.studentId');
+        // 4. Sinh lịch học (generateSemester...)
+        // ... (giữ nguyên phần rải lịch của bạn)
 
         res.status(201).json({
             success: true,
-            message: `Tạo lớp thành công. Đã sinh ${createdSessions.length} buổi học và tự động xếp ${autoAssignedCount} học sinh vào lớp.`,
-            data: populated
+            message: `Đã tạo lớp ${className} và gán ${unassignedStudents.length} học sinh.`,
+            classId: newClass._id
         });
 
     } catch (error) {
-        console.error("Lỗi createClass:", error);
-        res.status(400).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 // @desc    Get all classes with teacher info

@@ -27,7 +27,7 @@ const classSchema = new mongoose.Schema({
         },
         startTime: {
             type: String, // format "HH:MM" e.g "07:30"
-            required: trues
+            required: true
         },
         endTime: {
             type: String,
