@@ -1,83 +1,45 @@
+// user.model.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: [true, 'Please add a name']
-    },
+    name: { type: String, required: [true, 'Please add a name'] },
     email: {
         type: String,
         required: [true, 'Please add an email'],
         unique: true,
-        match: [
-            /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/,
-            'Please add a valid email'
-        ]
+        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
     },
-    password: {
-        type: String,
-        required: [true, 'Please add a password'],
-        minlength: 6,
-        select: false
-    },
-    role: {
-        type: String,
-        enum: ['admin', 'teacher', 'student'],
-        default: 'student'
-    },
+    password: { type: String, required: [true, 'Please add a password'], minlength: 6, select: false },
+    role: { type: String, enum: ['admin', 'teacher', 'student'], default: 'student' },
     profile: {
-        phoneNumber: {
-            type: String
-        },
-        address: {
-            type: String
-        },
-        gender: {
-            type: String,
-            enum: ['Male', 'Female', 'Other']
-        }
+        phoneNumber: String,
+        address: String,
+        gender: { type: String, enum: ['Male', 'Female', 'Other'] }
     },
     studentDetails: {
-        studentId: {
-            type: String
-        },
-        grade: {
-            type: Number,
-            min: 1,
-            max: 12
-        },
+        studentId: { type: String, unique: true, sparse: true }, // sparse để tránh lỗi trùng lặp khi null
+        grade: { type: Number, min: 1, max: 12 },
         class: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Class'
+            ref: 'Class',
+            default: null // Đảm bảo mặc định là null để dễ query $or
         },
-        grades: {
-            type: Array,
-            default: []
-        }
+        grades: { type: Array, default: [] }
     },
     teacherDetails: {
-        subject: {
-            type: String
-        },
-        assignedClasses: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Class'
-        }]
+        subject: String,
+        assignedClasses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }]
     }
 }, { timestamps: true });
 
-// Hash password before saving
+// Hash password (giữ nguyên logic của bạn)
 userSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) {
-        return next();
-    }
-
+    if (!this.isModified('password')) return next();
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });
 
-// Match user entered password to hashed password in database
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };

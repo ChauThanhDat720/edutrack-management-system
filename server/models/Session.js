@@ -19,9 +19,10 @@ const sessionSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['scheduled,completed,cancelled'], default: 'scheduled'
+        enum: ['scheduled', 'completed', 'cancelled'],
+        default: 'scheduled'
     },
-    teacherId: {
+    teacher: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true

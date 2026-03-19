@@ -1,6 +1,6 @@
 const Class = require('../models/Class');
 const User = require('../models/User');
-
+const { generateSemester } = require('../services/sessionService');
 // Helper: extract leading grade number from a className string
 // e.g. '10A1' → 10, '11B2' → 11, 'A1' → null
 const parseGrade = (className) => {
@@ -11,63 +11,64 @@ const parseGrade = (className) => {
 // @desc    Create a new class (auto-assigns matching unassigned students)
 // @route   POST /api/classes
 // @access  Admin
+
+const moment = require('moment');
+
+// class.controller.js
+// class.controller.js
 exports.createClass = async (req, res) => {
     try {
         const { className, teacher, room, schedule } = req.body;
 
+        // 1. Lấy khối từ tên lớp (ví dụ "10A1" -> 10)
+        const grade = parseGrade(className);
+        if (grade === null) {
+            return res.status(400).json({ success: false, message: "Tên lớp không hợp lệ để xác định khối (grade)" });
+        }
+
+        // 2. Tạo lớp học
         const newClass = await Class.create({ className, teacher, room, schedule });
 
-        // ── Auto-assign logic ─────────────────────────────────────────────────
-        const grade = parseGrade(className);
-        let autoAssignedCount = 0;
+        // 3. Tìm học sinh (SỬA LẠI ĐIỀU KIỆN TÌM KIẾM)
+        const unassignedStudents = await User.find({
+            role: 'student',
+            'studentDetails.grade': grade, // Phải khớp số khối
+            $or: [
+                { 'studentDetails.class': null },
+                { 'studentDetails.class': { $exists: false } }
+            ]
+        });
 
-        if (grade !== null) {
-            // Find all students who:
-            //  1. Are role: 'student'
-            //  2. Have studentDetails.grade matching the parsed grade
-            //  3. Have no class assigned yet (studentDetails.class is null/undefined)
-            const unassignedStudents = await User.find({
-                role: 'student',
-                'studentDetails.grade': grade,
-                $or: [
-                    { 'studentDetails.class': null },
-                    { 'studentDetails.class': { $exists: false } }
-                ]
-            }).select('_id');
+        console.log(`Tìm thấy ${unassignedStudents.length} học sinh khối ${grade} chưa có lớp`);
 
-            if (unassignedStudents.length > 0) {
-                const studentIds = unassignedStudents.map(s => s._id);
+        if (unassignedStudents.length > 0) {
+            const studentIds = unassignedStudents.map(s => s._id);
 
-                // 1. Update all matched students to point to this new class
-                await User.updateMany(
-                    { _id: { $in: studentIds } },
-                    { $set: { 'studentDetails.class': newClass._id } }
-                );
+            // Cập nhật User: Thêm class ID
+            await User.updateMany(
+                { _id: { $in: studentIds } },
+                { $set: { 'studentDetails.class': newClass._id } }
+            );
 
-                // 2. Push all their IDs into Class.students (addToSet avoids dupes)
-                await Class.findByIdAndUpdate(newClass._id, {
-                    $addToSet: { students: { $each: studentIds } }
-                });
-
-                autoAssignedCount = studentIds.length;
-            }
+            // Cập nhật Class: Thêm mảng student IDs
+            await Class.findByIdAndUpdate(newClass._id, {
+                $set: { students: studentIds }
+            });
         }
-        // ─────────────────────────────────────────────────────────────────────
 
-        const populated = await Class.findById(newClass._id)
-            .populate('teacher', 'name email role')
-            .populate('students', 'name email studentDetails.studentId');
+        // 4. Sinh lịch học (generateSemester...)
+        // ... (giữ nguyên phần rải lịch của bạn)
 
         res.status(201).json({
             success: true,
-            message: `Tạo lớp thành công. Đã tự động xếp ${autoAssignedCount} học sinh khối ${grade ?? '?'} vào lớp.`,
-            data: populated
+            message: `Đã tạo lớp ${className} và gán ${unassignedStudents.length} học sinh.`,
+            classId: newClass._id
         });
+
     } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
+        res.status(500).json({ success: false, message: error.message });
     }
 };
-
 // @desc    Get all classes with teacher info
 // @route   GET /api/classes
 // @access  Admin, Teacher

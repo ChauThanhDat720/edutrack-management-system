@@ -1,10 +1,15 @@
 import React, { useContext } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Bell, LogOut, BookOpen, Plus } from 'lucide-react';
+import { LayoutDashboard, Users, Bell, LogOut, BookOpen, Plus, Calendar } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 
 const Sidebar = () => {
     const { logout, user } = useContext(AuthContext);
+
+    const getNavLinkClass = ({ isActive }) =>
+        `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
+            isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+        }`;
 
     return (
         <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
@@ -13,58 +18,54 @@ const Sidebar = () => {
             </div>
 
             <nav className="flex-1 p-4 space-y-2">
-                <NavLink
-                    to="/"
-                    className={({ isActive }) =>
-                        `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                        }`
-                    }
-                >
+                <NavLink to="/" className={getNavLinkClass}>
                     <LayoutDashboard size={20} />
                     <span className="font-medium">Dashboard</span>
                 </NavLink>
 
-                {user?.role === 'admin' ? (
+                {user?.role === 'admin' && (
                     <>
-                        <NavLink
-                            to="/admin/users"
-                            className={({ isActive }) =>
-                                `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`
-                            }
-                        >
+                        <NavLink to="/admin/users" className={getNavLinkClass}>
                             <Users size={20} />
                             <span className="font-medium">Quản lý Người dùng</span>
                         </NavLink>
-                        <NavLink
-                            to="/admin/classes"
-                            className={({ isActive }) =>
-                                `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`
-                            }
-                        >
+                        <NavLink to="/admin/classes" className={getNavLinkClass}>
                             <BookOpen size={20} />
                             <span className="font-medium">Quản lý Lớp học</span>
                         </NavLink>
-                        <NavLink
-                            to="/admin/announcements/create"
-                            className={({ isActive }) =>
-                                `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`
-                            }
-                        >
+                        <NavLink to="/admin/announcements/create" className={getNavLinkClass}>
                             <Plus size={20} />
                             <span className="font-medium">Đăng thông báo</span>
                         </NavLink>
                     </>
-                ) : (
-                    <NavLink
-                        to="/announcements"
-                        className={({ isActive }) =>
-                            `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`
-                        }
-                    >
-                        <Bell size={20} />
-                        <span className="font-medium">Announcements</span>
-                    </NavLink>
                 )}
+
+                {user?.role === 'teacher' && (
+                    <>
+                        <NavLink to="/teacher/classes" className={getNavLinkClass}>
+                            <BookOpen size={20} />
+                            <span className="font-medium">Quản lý Lớp học</span>
+                        </NavLink>
+                    </>
+                )}
+
+                {user?.role === 'student' && (
+                    <>
+                        <NavLink to="/student/classes" className={getNavLinkClass}>
+                            <BookOpen size={20} />
+                            <span className="font-medium">Lớp học của tôi</span>
+                        </NavLink>
+                        <NavLink to="/student/schedule" className={getNavLinkClass}>
+                            <Calendar size={20} />
+                            <span className="font-medium">Lịch học</span>
+                        </NavLink>
+                    </>
+                )}
+
+                <NavLink to="/announcements" className={getNavLinkClass}>
+                    <Bell size={20} />
+                    <span className="font-medium">Announcements</span>
+                </NavLink>
             </nav>
 
             <div className="p-4 border-t border-gray-200">
