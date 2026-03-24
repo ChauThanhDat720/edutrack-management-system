@@ -18,7 +18,7 @@ exports.generateSemester = async (classDoc, startDate, endDate) => {
             // Thêm buổi học vào danh sách tạm thời
             sessions.push({
                 classId: classDoc._id,
-                date: currentDate.toDate(), // Chuyển moment về JS Date để lưu DB
+                date: currentDate.toDate(),
                 startTime: scheduleMap[dayName].startTime,
                 endTime: scheduleMap[dayName].endTime,
                 teacher: classDoc.teacher,
@@ -26,7 +26,7 @@ exports.generateSemester = async (classDoc, startDate, endDate) => {
             });
         }
 
-        // QUAN TRỌNG: Phải tăng ngày lên nếu không sẽ bị treo máy (vòng lặp vô tận)
+
         currentDate.add(1, 'days');
     }
 

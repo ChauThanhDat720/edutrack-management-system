@@ -11,7 +11,7 @@ const CreateUserModal = ({ onClose, onCreated }) => {
         email: '',
         password: '',
         role: 'student',
-        studentDetails: { studentId: '' },
+        studentDetails: { studentId: '', className: '' },
         teacherDetails: { subject: '' }
     });
     const [loading, setLoading] = useState(false);
@@ -19,8 +19,8 @@ const CreateUserModal = ({ onClose, onCreated }) => {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        if (name === 'studentId') {
-            setFormData({ ...formData, studentDetails: { ...formData.studentDetails, studentId: value } });
+        if (name === 'studentId' || name === 'className') {
+            setFormData({ ...formData, studentDetails: { ...formData.studentDetails, [name]: value } });
         } else if (name === 'subject') {
             setFormData({ ...formData, teacherDetails: { ...formData.teacherDetails, subject: value } });
         } else {
@@ -125,17 +125,30 @@ const CreateUserModal = ({ onClose, onCreated }) => {
                         </div>
 
                         {formData.role === 'student' ? (
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Mã Học Sinh</label>
-                                <input
-                                    type="text"
-                                    name="studentId"
-                                    value={formData.studentDetails.studentId}
-                                    onChange={handleChange}
-                                    placeholder="HS12345"
-                                    className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
+                            <>
+                                <div className="col-span-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Mã Học Sinh</label>
+                                    <input
+                                        type="text"
+                                        name="studentId"
+                                        value={formData.studentDetails.studentId}
+                                        onChange={handleChange}
+                                        placeholder="HS12345"
+                                        className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Lớp Học</label>
+                                    <input
+                                        type="text"
+                                        name="className"
+                                        value={formData.studentDetails.className}
+                                        onChange={handleChange}
+                                        placeholder="Ví dụ: 10A7"
+                                        className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </>
                         ) : (
                             <div className="col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Môn Học Giảng Dạy</label>

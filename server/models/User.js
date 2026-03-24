@@ -18,13 +18,10 @@ const userSchema = new mongoose.Schema({
         gender: { type: String, enum: ['Male', 'Female', 'Other'] }
     },
     studentDetails: {
-        studentId: { type: String, unique: true, sparse: true }, // sparse để tránh lỗi trùng lặp khi null
+        studentId: { type: String, unique: true, sparse: true },
         grade: { type: Number, min: 1, max: 12 },
-        class: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Class',
-            default: null // Đảm bảo mặc định là null để dễ query $or
-        },
+        className: { type: String, default: null },
+        class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', default: null },
         grades: { type: Array, default: [] }
     },
     teacherDetails: {
@@ -33,7 +30,6 @@ const userSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-// Hash password (giữ nguyên logic của bạn)
 userSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
     const salt = await bcrypt.genSalt(10);

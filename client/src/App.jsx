@@ -7,6 +7,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Announcements from './pages/Announcements';
 import CreateAnnouncement from './pages/CreateAnnouncement';
+import EditAnnouncement from './pages/EditAnnouncement';
 import UserManagement from './pages/UserManagement';
 import ClassManagement from './pages/ClassManagement';
 import ClassDetail from './pages/ClassDetail';
@@ -100,6 +101,7 @@ function App() {
           >
             <Route index element={<Dashboard />} />
             <Route path="announcements/create" element={<CreateAnnouncement />} />
+            <Route path="announcements/edit/:id" element={<EditAnnouncement />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="classes/:id" element={<ClassDetail />} />

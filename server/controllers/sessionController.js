@@ -86,7 +86,6 @@ exports.getStudentSchedule = async (req, res) => {
     try {
         const studentId = req.user.id;
 
-        // 1. Tìm học sinh và lấy thông tin lớp
         const student = await User.findById(studentId);
 
         if (!student) {

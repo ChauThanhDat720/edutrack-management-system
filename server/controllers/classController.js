@@ -14,61 +14,79 @@ const parseGrade = (className) => {
 
 const moment = require('moment');
 
-// class.controller.js
-// class.controller.js
 exports.createClass = async (req, res) => {
     try {
         const { className, teacher, room, schedule } = req.body;
 
-        // 1. Lấy khối từ tên lớp (ví dụ "10A1" -> 10)
+        // 1. Kiểm tra tên lớp phải bắt đầu bằng số khối
         const grade = parseGrade(className);
-        if (grade === null) {
-            return res.status(400).json({ success: false, message: "Tên lớp không hợp lệ để xác định khối (grade)" });
-        }
-
-        // 2. Tạo lớp học
-        const newClass = await Class.create({ className, teacher, room, schedule });
-
-        // 3. Tìm học sinh (SỬA LẠI ĐIỀU KIỆN TÌM KIẾM)
-        const unassignedStudents = await User.find({
-            role: 'student',
-            'studentDetails.grade': grade, // Phải khớp số khối
-            $or: [
-                { 'studentDetails.class': null },
-                { 'studentDetails.class': { $exists: false } }
-            ]
-        });
-
-        console.log(`Tìm thấy ${unassignedStudents.length} học sinh khối ${grade} chưa có lớp`);
-
-        if (unassignedStudents.length > 0) {
-            const studentIds = unassignedStudents.map(s => s._id);
-
-            // Cập nhật User: Thêm class ID
-            await User.updateMany(
-                { _id: { $in: studentIds } },
-                { $set: { 'studentDetails.class': newClass._id } }
-            );
-
-            // Cập nhật Class: Thêm mảng student IDs
-            await Class.findByIdAndUpdate(newClass._id, {
-                $set: { students: studentIds }
+        if (!grade) {
+            return res.status(400).json({
+                success: false,
+                message: "Tên lớp phải bắt đầu bằng số khối (Ví dụ: 10A1, 11B2...)"
             });
         }
 
-        // 4. Sinh lịch học (generateSemester...)
-        // ... (giữ nguyên phần rải lịch của bạn)
+        // 2. Kiểm tra lớp tồn tại & Giáo viên hợp lệ
+        const [classExists, teacherUser] = await Promise.all([
+            Class.findOne({ className }),
+            User.findOne({ _id: teacher, role: 'teacher' })
+        ]);
+
+        if (classExists) return res.status(400).json({ success: false, message: "Tên lớp đã tồn tại" });
+        if (!teacherUser) return res.status(404).json({ success: false, message: "Giáo viên không hợp lệ" });
+
+        // 3. Tìm học sinh có tên lớp trùng khớp và chưa được gán vào lớp nào
+        const matchingStudents = await User.find({
+            role: 'student',
+            'studentDetails.className': className,
+            'studentDetails.class': null
+        });
+        const studentIds = matchingStudents.map(s => s._id);
+
+        // 4. Tạo lớp học
+        const newClass = await Class.create({
+            className,
+            teacher,
+            room,
+            schedule,
+            students: studentIds
+        });
+
+        // 5. Cập nhật dữ liệu liên quan (chạy song song)
+        await Promise.all([
+            // Gán class ObjectId cho các học sinh matching
+            studentIds.length > 0 && User.updateMany(
+                { _id: { $in: studentIds } },
+                { $set: { 'studentDetails.class': newClass._id } }
+            ),
+            // Thêm lớp vào danh sách lớp của giáo viên
+            User.findByIdAndUpdate(teacher, {
+                $addToSet: { 'teacherDetails.assignedClasses': newClass._id }
+            })
+        ]);
+
+        // 6. Tự động tạo Sessions cho 6 tháng tới
+        const startDate = moment().startOf('day').toDate();
+        const endDate = moment().add(6, 'months').endOf('day').toDate();
+        const generatedSessions = await generateSemester(newClass, startDate, endDate);
 
         res.status(201).json({
             success: true,
-            message: `Đã tạo lớp ${className} và gán ${unassignedStudents.length} học sinh.`,
-            classId: newClass._id
+            message: `Tạo lớp ${className} thành công. Đã gán ${studentIds.length} học sinh.`,
+            data: {
+                classId: newClass._id,
+                totalStudents: studentIds.length,
+                sessionsCount: generatedSessions?.length || 0
+            }
         });
 
     } catch (error) {
+        console.error("LỖI TẠO LỚP:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 // @desc    Get all classes with teacher info
 // @route   GET /api/classes
 // @access  Admin, Teacher
@@ -107,6 +125,9 @@ exports.addStudent = async (req, res) => {
 
         classDoc.students.push(studentId);
         await classDoc.save();
+
+        // Update the student's User document to reference this class
+        await User.findByIdAndUpdate(studentId, { $set: { 'studentDetails.class': classDoc._id } });
 
         // Return populated result
         const updated = await Class.findById(req.params.id)
@@ -165,12 +186,14 @@ exports.manageStudents = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Học sinh đã có trong lớp này' });
             }
             classDoc.students.push(studentId);
+            await User.findByIdAndUpdate(studentId, { $set: { 'studentDetails.class': classDoc._id } });
         } else {
             // remove
             if (!alreadyIn) {
                 return res.status(400).json({ success: false, message: 'Học sinh không có trong lớp này' });
             }
             classDoc.students = classDoc.students.filter(s => s.toString() !== studentId);
+            await User.findByIdAndUpdate(studentId, { $set: { 'studentDetails.class': null } });
         }
 
         await classDoc.save();
@@ -211,5 +234,32 @@ exports.updateClass = async (req, res) => {
         res.status(200).json({ success: true, data: updated });
     } catch (error) {
         res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+// @desc    Generate sessions for an existing class (for classes created before auto-generation)
+// @route   POST /api/classes/:id/generate-sessions
+// @access  Admin
+exports.generateClassSessions = async (req, res) => {
+    try {
+        const classDoc = await Class.findById(req.params.id);
+        if (!classDoc) {
+            return res.status(404).json({ success: false, message: 'Không tìm thấy lớp học' });
+        }
+        if (!classDoc.schedule || classDoc.schedule.length === 0) {
+            return res.status(400).json({ success: false, message: 'Lớp học chưa có lịch học. Vui lòng cập nhật lịch trước.' });
+        }
+
+        const startDate = moment().startOf('day').toDate();
+        const endDate = moment().add(6, 'months').endOf('day').toDate();
+        const sessions = await generateSemester(classDoc, startDate, endDate);
+
+        res.status(200).json({
+            success: true,
+            message: `Đã tạo ${sessions.length} buổi học cho lớp ${classDoc.className}.`,
+            data: { sessionsGenerated: sessions.length }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };

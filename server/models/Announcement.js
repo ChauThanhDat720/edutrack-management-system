@@ -21,6 +21,10 @@ const announcementSchema = new mongoose.Schema({
         enum: ['all', 'teacher', 'student'],
         default: 'all',
         required: true
+    },
+    attachments: {
+        type: Array,
+        default: []
     }
 }, { timestamps: true });
 

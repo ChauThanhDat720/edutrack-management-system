@@ -263,6 +263,16 @@ const ClassManagement = () => {
         setSelectedClass(null);
     };
 
+    const handleGenerateSessions = async (cls) => {
+        if (!window.confirm(`Tạo lịch học 6 tháng cho lớp "${cls.className}"?`)) return;
+        try {
+            const res = await api.post(`/classes/${cls._id}/generate-sessions`);
+            alert(res.data.message);
+        } catch (err) {
+            alert(err.response?.data?.message || 'Không thể tạo lịch học');
+        }
+    };
+
     const fetchClasses = async () => {
         try {
             const res = await api.get('/classes');

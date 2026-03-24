@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
-import { Send, CheckCircle } from 'lucide-react';
+import { Send, CheckCircle, Edit, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const Announcements = () => {
     const { user } = useContext(AuthContext);
+    const navigate = useNavigate();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [targetRole, setTargetRole] = useState('all');
@@ -26,6 +28,18 @@ const Announcements = () => {
     useEffect(() => {
         fetchAnnouncements();
     }, []);
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this announcement?')) return;
+
+        try {
+            await api.delete(`/announcements/${id}`);
+            setSuccessMsg('Announcement deleted successfully!');
+            fetchAnnouncements();
+        } catch (err) {
+            setErrorMsg(err.response?.data?.error || 'Failed to delete announcement');
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -82,8 +96,28 @@ const Announcements = () => {
                                         </span>
                                     </div>
                                     <p className="text-sm text-gray-600 whitespace-pre-wrap">{ann.content}</p>
-                                    <div className="mt-3 text-xs text-gray-400">
-                                        Published: {new Date(ann.createdAt).toLocaleString()}
+                                    <div className="mt-3 flex items-center justify-between">
+                                        <div className="text-xs text-gray-400">
+                                            Published: {new Date(ann.createdAt).toLocaleString()}
+                                        </div>
+                                        {user?.role === 'admin' && (
+                                            <div className="flex space-x-2">
+                                                <button
+                                                    onClick={() => navigate(`/admin/announcements/edit/${ann._id}`)}
+                                                    className="p-1 text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Edit size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(ann._id)}
+                                                    className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))

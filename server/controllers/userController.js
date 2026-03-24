@@ -52,6 +52,13 @@ exports.createUser = async (req, res) => {
             return res.status(400).json({ message: 'Email đã tồn tại' });
         }
 
+        // Làm sạch studentDetails: className rỗng → null
+        if (req.body.studentDetails) {
+            if (!req.body.studentDetails.className) {
+                req.body.studentDetails.className = null;
+            }
+        }
+
         const user = await User.create(req.body);
 
         res.status(201).json({

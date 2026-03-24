@@ -6,7 +6,8 @@ const {
     getClassById,
     addStudent,
     manageStudents,
-    updateClass
+    updateClass,
+    generateClassSessions
 } = require('../controllers/classController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -128,5 +129,9 @@ router.route('/:id/add-student')
 // PATCH /api/classes/:id/students — add or remove a student
 router.route('/:id/students')
     .patch(protect, authorize('admin'), manageStudents);
+
+// POST /api/classes/:id/generate-sessions — generate sessions for existing class
+router.route('/:id/generate-sessions')
+    .post(protect, authorize('admin'), generateClassSessions);
 
 module.exports = router;
