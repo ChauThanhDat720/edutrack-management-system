@@ -14,8 +14,10 @@ import ClassDetail from './pages/ClassDetail';
 import SessionAttendance from './pages/SessionAttendance';
 import StudentSchedule from './pages/StudentSchedule';
 
+import GradeManagement from './pages/GradeManagement';
+import MyGrades from './pages/MyGrades';
+
 // ─── Base Protected Route ────────────────────────────────────────────────────
-// Checks only that the user is authenticated (any role)
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useContext(AuthContext);
 
@@ -27,16 +29,11 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
   return children;
 };
 
 // ─── Role-Based Protected Route ──────────────────────────────────────────────
-// Wraps ProtectedRoute and additionally checks the user's role.
-// allowedRoles: array of role strings, e.g. ['admin'], ['teacher', 'admin']
 const RoleProtectedRoute = ({ children, allowedRoles }) => {
   const { user, isAuthenticated, loading } = useContext(AuthContext);
 
@@ -48,14 +45,9 @@ const RoleProtectedRoute = ({ children, allowedRoles }) => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (!allowedRoles.includes(user?.role)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!allowedRoles.includes(user?.role)) return <Navigate to="/unauthorized" replace />;
+  
   return children;
 };
 
@@ -77,68 +69,44 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
 
-          {/* ── Shared authenticated routes (any role) ── */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
+          {/* ── Shared authenticated routes ── */}
+          <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="announcements" element={<Announcements />} />
           </Route>
 
           {/* ── Admin-only routes ── */}
-          <Route
-            path="/admin"
-            element={
-              <RoleProtectedRoute allowedRoles={['admin']}>
-                <Layout />
-              </RoleProtectedRoute>
-            }
-          >
+          <Route path="/admin" element={<RoleProtectedRoute allowedRoles={['admin']}><Layout /></RoleProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="announcements/create" element={<CreateAnnouncement />} />
             <Route path="announcements/edit/:id" element={<EditAnnouncement />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="classes/:id" element={<ClassDetail />} />
+            <Route path="classes/:id/grades" element={<GradeManagement />} />
             <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
           </Route>
 
           {/* ── Teacher-only routes ── */}
-          <Route
-            path="/teacher"
-            element={
-              <RoleProtectedRoute allowedRoles={['teacher']}>
-                <Layout />
-              </RoleProtectedRoute>
-            }
-          >
+          <Route path="/teacher" element={<RoleProtectedRoute allowedRoles={['teacher']}><Layout /></RoleProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="classes/:id" element={<ClassDetail />} />
+            <Route path="classes/:id/grades" element={<GradeManagement />} />
             <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
           </Route>
 
           {/* ── Student-only routes ── */}
-          <Route
-            path="/student"
-            element={
-              <RoleProtectedRoute allowedRoles={['student']}>
-                <Layout />
-              </RoleProtectedRoute>
-            }
-          >
+          <Route path="/student" element={<RoleProtectedRoute allowedRoles={['student']}><Layout /></RoleProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="classes" element={<ClassManagement />} />
             <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="schedule" element={<StudentSchedule />} />
+            <Route path="grades" element={<MyGrades />} />
           </Route>
 
           {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>

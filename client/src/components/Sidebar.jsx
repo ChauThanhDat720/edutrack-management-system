@@ -59,6 +59,10 @@ const Sidebar = () => {
                             <Calendar size={20} />
                             <span className="font-medium">Lịch học</span>
                         </NavLink>
+                        <NavLink to="/student/grades" className={getNavLinkClass}>
+                            <BookOpen size={20} />
+                            <span className="font-medium">Kết quả học tập</span>
+                        </NavLink>
                     </>
                 )}
 

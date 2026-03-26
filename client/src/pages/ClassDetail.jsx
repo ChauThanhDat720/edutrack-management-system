@@ -96,27 +96,39 @@ const ClassDetail = () => {
     return (
         <div className="space-y-6 max-w-5xl mx-auto">
             {/* Back Button + Header */}
-            <div className="flex items-center gap-4">
-                <button
-                    onClick={() => navigate('..')}
-                    className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors"
-                >
-                    <ArrowLeft size={20} />
-                </button>
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">
-                        Lớp {classData.className}
-                    </h1>
-                    <p className="text-sm text-gray-500">
-                        Giáo viên: <span className="font-medium text-gray-700">{classData.teacher?.name}</span>
-                        {classData.teacher?.teacherDetails?.subject && (
-                            <> · Môn: <span className="font-medium text-gray-700">{classData.teacher.teacherDetails.subject}</span></>
-                        )}
-                        {classData.room && (
-                            <> · Phòng: <span className="font-medium text-gray-700">{classData.room}</span></>
-                        )}
-                    </p>
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate('..')}
+                        className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+                    >
+                        <ArrowLeft size={20} />
+                    </button>
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">
+                            Lớp {classData.className}
+                        </h1>
+                        <p className="text-sm text-gray-500">
+                            Giáo viên: <span className="font-medium text-gray-700">{classData.teacher?.name}</span>
+                            {classData.teacher?.teacherDetails?.subject && (
+                                <> · Môn: <span className="font-medium text-gray-700">{classData.teacher.teacherDetails.subject}</span></>
+                            )}
+                            {classData.room && (
+                                <> · Phòng: <span className="font-medium text-gray-700">{classData.room}</span></>
+                            )}
+                        </p>
+                    </div>
                 </div>
+                
+                {/* Nút Bảng điểm cho Admin & Teacher */}
+                {(user?.role === 'admin' || user?.role === 'teacher') && (
+                    <button
+                        onClick={() => navigate('grades')}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition font-medium text-sm shadow-sm"
+                    >
+                        <BookOpen size={18} /> Bảng điểm
+                    </button>
+                )}
             </div>
 
             {/* Feedback Toast */}

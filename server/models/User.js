@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
         grade: { type: Number, min: 1, max: 12 },
         className: { type: String, default: null },
         class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', default: null },
-        grades: { type: Array, default: [] }
+
     },
     teacherDetails: {
         subject: String,
