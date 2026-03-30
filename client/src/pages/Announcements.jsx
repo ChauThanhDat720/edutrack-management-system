@@ -90,15 +90,22 @@ const Announcements = () => {
                             announcements.map((ann) => (
                                 <div key={ann._id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
                                     <div className="flex justify-between items-start mb-2">
-                                        <h4 className="text-md font-semibold text-gray-900">{ann.title}</h4>
-                                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 capitalize">
-                                            {ann.targetRole}
+                                        <h4 className="text-md font-bold text-gray-900">{ann.title}</h4>
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                                            ann.targetRole === 'all' ? 'bg-blue-100 text-blue-700' :
+                                            ann.targetRole === 'student' ? 'bg-green-100 text-green-700' :
+                                            'bg-purple-100 text-purple-700'
+                                        }`}>
+                                            {ann.targetRole === 'all' ? '📢 Tất cả' :
+                                             ann.targetRole === 'student' ? '🎓 Học sinh' : '👨‍🏫 Giáo viên'}
                                         </span>
                                     </div>
-                                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{ann.content}</p>
-                                    <div className="mt-3 flex items-center justify-between">
-                                        <div className="text-xs text-gray-400">
-                                            Published: {new Date(ann.createdAt).toLocaleString()}
+                                    <p className="text-sm text-gray-600 whitespace-pre-wrap leading-relaxed">{ann.content}</p>
+                                    <div className="mt-4 pt-3 flex items-center justify-between border-t border-gray-50">
+                                        <div className="flex items-center space-x-2 text-[10px] text-gray-400">
+                                            <span className="font-medium text-gray-500">Tác giả: {ann.author?.name}</span>
+                                            <span>•</span>
+                                            <span>Ngày đăng: {new Date(ann.createdAt).toLocaleDateString()}</span>
                                         </div>
                                         {user?.role === 'admin' && (
                                             <div className="flex space-x-2">

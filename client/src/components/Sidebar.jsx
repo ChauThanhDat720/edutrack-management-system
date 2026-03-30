@@ -1,10 +1,12 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Bell, LogOut, BookOpen, Plus, Calendar } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import NotificationList from './NotificationList';
 
 const Sidebar = () => {
     const { logout, user } = useContext(AuthContext);
+    const [showNotifications, setShowNotifications] = useState(false);
 
     const getNavLinkClass = ({ isActive }) =>
         `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
@@ -12,12 +14,12 @@ const Sidebar = () => {
         }`;
 
     return (
-        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full">
+        <aside className="w-64 bg-white border-r border-gray-200 flex flex-col h-full relative">
             <div className="p-6 border-b border-gray-200">
                 <h2 className="text-2xl font-bold text-blue-600">EduManager</h2>
             </div>
 
-            <nav className="flex-1 p-4 space-y-2">
+            <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                 <NavLink to="/" className={getNavLinkClass}>
                     <LayoutDashboard size={20} />
                     <span className="font-medium">Dashboard</span>
@@ -68,23 +70,35 @@ const Sidebar = () => {
 
                 <NavLink to="/announcements" className={getNavLinkClass}>
                     <Bell size={20} />
-                    <span className="font-medium">Announcements</span>
+                    <span className="font-medium">Thông báo chung</span>
                 </NavLink>
+
+                <button 
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="w-full flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors relative"
+                >
+                    <Bell size={20} />
+                    <span className="font-medium">Thông báo của tôi</span>
+                </button>
+                
+                {showNotifications && (
+                    <NotificationList onClose={() => setShowNotifications(false)} />
+                )}
             </nav>
 
-            <div className="p-4 border-t border-gray-200">
-                <div className="flex items-center justify-between px-4 py-3">
+            <div className="p-4 border-t border-gray-200 bg-gray-50/50">
+                <div className="flex items-center justify-between px-4 py-2">
                     <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-gray-900">{user?.name}</span>
-                        <span className="text-xs text-gray-500 capitalize">{user?.role}</span>
+                        <span className="text-sm font-bold text-gray-900">{user?.name}</span>
+                        <span className="text-[10px] uppercase tracking-wider text-gray-500 font-bold">{user?.role}</span>
                     </div>
                 </div>
                 <button
                     onClick={logout}
-                    className="mt-2 w-full flex items-center justify-center space-x-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    className="mt-2 w-full flex items-center justify-center space-x-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                 >
                     <LogOut size={20} />
-                    <span className="font-medium">Logout</span>
+                    <span className="font-medium">Đăng xuất</span>
                 </button>
             </div>
         </aside>

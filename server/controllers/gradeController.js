@@ -1,6 +1,7 @@
 const Grade = require('../models/Grade');
 const User = require('../models/User');
 const Class = require('../models/Class')
+const { sendNotification } = require('../utils/notificationHelper')
 // @desc    Nhập hoặc cập nhật điểm cho học sinh
 // @route   POST /api/grades
 exports.updateStudentGrade = async (req, res) => {
@@ -27,6 +28,13 @@ exports.updateStudentGrade = async (req, res) => {
                 finalGrade
             });
         }
+        sendNotification(
+            studentId,
+            req.user.id,
+            `Cập nhật điểm môn ${subject}`,
+            `Chào bạn, giáo viên vừa cập nhật điểm ${term} cho bạn. Hãy kiểm tra ngay!`,
+            'GRADE_UPDATE'
+        )
 
         res.status(200).json({ success: true, data: grade });
     } catch (error) {
@@ -48,12 +56,12 @@ exports.getGradesByStudent = async (req, res) => {
                 error: 'Học sinh chưa có điểm'
             });
         }
-        res.status('200').json({
+        res.status(200).json({
             sucess: true,
             data: grades
         });
     } catch (error) {
-        return res.status('400').json({
+        return res.status(400).json({
             sucess: false,
             error: error
         });
@@ -68,7 +76,7 @@ exports.getGradesByTeacher = async (req, res) => {
         const teacherId = req.user.id
         const currentClass = await Class.findById(classId)
         if (!currentClass) {
-            return res.status('404').json({
+            return res.status(404).json({
                 success: false,
                 error: 'Không tìm thấy lớp học'
             });
@@ -81,12 +89,12 @@ exports.getGradesByTeacher = async (req, res) => {
             .populate('student', 'name mail studentDetails.studentId')
             .sort('student')
         if (!grades) {
-            return res.status('404').json({
+            return res.status(404).json({
                 success: false,
                 error: `Chưa có điểm môn ${subject} cho lớp này`
             });
         }
-        res.status('200').json({
+        res.status(200).json({
             success: true,
             className: currentClass.className,
             data: grades

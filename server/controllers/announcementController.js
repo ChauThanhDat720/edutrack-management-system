@@ -1,14 +1,40 @@
 const Announcement = require('../models/Announcement');
+const User = require('../models/User');
+const { sendNotification } = require('../utils/notificationHelper');
 
 // @desc    Create new announcement
 // @route   POST /api/announcements
 // @access  Private (Admin only)
 exports.createAnnouncement = async (req, res) => {
     try {
-        // Add the logged-in user to req.body as the author
         req.body.author = req.user.id;
 
         const announcement = await Announcement.create(req.body);
+
+        // Fetch users based on targetRole
+        let query = {};
+        if (announcement.targetRole === 'student') {
+            query = { role: 'student' };
+        } else if (announcement.targetRole === 'teacher') {
+            query = { role: 'teacher' };
+        }
+        // If 'all', query stays empty {} to get all users
+
+        const recipients = await User.find(query);
+
+        // Send notifications to all recipients
+        const notificationPromises = recipients.map(user =>
+            sendNotification(
+                user._id,
+                req.user.id,
+                `Thông báo mới: ${announcement.title}`,
+                `Chào bạn, có một thông báo mới trong hệ thống. Hãy kiểm tra ngay!`,
+                'ANNOUNCEMENT'
+            )
+        );
+
+        // Run notification sending in background
+        Promise.all(notificationPromises).catch(err => console.error('Lỗi gửi thông báo:', err));
 
         res.status(201).json({
             success: true,
@@ -24,7 +50,6 @@ exports.createAnnouncement = async (req, res) => {
 // @access  Public (or based on targetRole if needed, but per request everyone can see)
 exports.getAnnouncements = async (req, res) => {
     try {
-        // You can also populate the author to get author's name and email
         const announcements = await Announcement.find()
             .populate({
                 path: 'author',
