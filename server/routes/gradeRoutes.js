@@ -11,7 +11,7 @@ router.get('/class/:classId',
     getGradesByTeacher);
 
 router.get('/student/:studentId',
-    protect, 
+    protect,
     authorize('admin', 'teacher', 'student'),
     getGradesByStudent);
 
