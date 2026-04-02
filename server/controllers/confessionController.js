@@ -82,7 +82,6 @@ exports.updateConfession = async (req, res) => {
             success: false,
             error: error.message
         })
-
     }
 }
 // @desc Delete confession
@@ -122,6 +121,12 @@ exports.approveConfession = async (req, res) => {
         const { status } = req.body;
         if (!['approved', 'rejected'].includes(status)) {
             return res.status(400).json({ message: 'Trạng thái không hợp lệ' })
+        }
+        if (req.user.role !== 'admin') {
+            return res.status(401).json({
+                success: false,
+                message: 'Bạn không có quyền chi cập'
+            })
         }
         const confession = await Confession.findByIdAndUpdate(req.params.id,
             { status },

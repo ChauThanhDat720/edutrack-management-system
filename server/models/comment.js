@@ -13,5 +13,10 @@ const commentSchema = new mongoose.Schema({
     content: {
         type: String,
         required: [true, 'please add content']
+    },
+    title: {
+        type: String,
+        required: [true, 'Please add title']
+
     }
 }, { timestamps: true });
