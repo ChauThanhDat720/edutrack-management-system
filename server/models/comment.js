@@ -16,7 +16,9 @@ const commentSchema = new mongoose.Schema({
     },
     title: {
         type: String,
-        required: [true, 'Please add title']
-
     }
 }, { timestamps: true });
+
+commentSchema.index({ confession: 1, createdAt: -1 });
+
+module.exports = mongoose.model('Comment', commentSchema);

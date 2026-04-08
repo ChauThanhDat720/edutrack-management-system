@@ -59,11 +59,11 @@ exports.submitAttendance = async (req, res) => {
         const { sessionId } = req.params;
         const { attendanceData } = req.body;
         if (!attendanceData || !Array.isArray(attendanceData)) {
-            return res.status(400).json({ sucess: false, message: "Dữ liệu điểm danh không hợp lệ" });
+            return res.status(400).json({ success: false, message: "Dữ liệu điểm danh không hợp lệ" });
         }
         const operations = attendanceData.map(item => ({
             updateOne: {
-                fillter: { sessionId, studentId: item.studentId },
+                filter: { sessionId, studentId: item.studentId },
                 update: { status: item.status },
                 upsert: true
             }
@@ -71,10 +71,10 @@ exports.submitAttendance = async (req, res) => {
         }));
         await Attendance.bulkWrite(operations)
         await Session.findByIdAndUpdate(sessionId, { status: 'completed' })
-        res.status(200).json({ sucess: true, message: "Ghi nhận điểm danh thành công" })
+        res.status(200).json({ success: true, message: "Ghi nhận điểm danh thành công" })
 
     } catch (error) {
-        res.status(500).json({ sucess: false, message: error.message })
+        res.status(500).json({ success: false, message: error.message })
 
     }
 }

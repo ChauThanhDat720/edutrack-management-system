@@ -21,4 +21,6 @@ const notificationSchema = new mongoose.Schema({
     link: { type: String }
 }, { timestamps: true });
 
+notificationSchema.index({ recipient: 1, createdAt: -1 });
+
 module.exports = mongoose.model('Notification', notificationSchema);

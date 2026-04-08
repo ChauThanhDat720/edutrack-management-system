@@ -28,4 +28,8 @@ const sessionSchema = new mongoose.Schema({
         required: true
     }
 }, { timestamps: true });
+
+sessionSchema.index({ teacher: 1, date: 1 });
+sessionSchema.index({ classId: 1, date: 1 });
+
 module.exports = mongoose.model('Session', sessionSchema);

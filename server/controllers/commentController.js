@@ -7,9 +7,9 @@ exports.createComment = async (req, res) => {
     try {
         const { content } = req.body;
         const confessionId = req.params.confessionId;
-        const confession = Confession.findById(confessionId);
+        const confession = await Confession.findById(confessionId);
         if (!confession) {
-            return res.satus(404).json({
+            return res.status(404).json({
                 success: false,
                 message: "Không tìm thấy confession"
             });
@@ -19,6 +19,18 @@ exports.createComment = async (req, res) => {
             author: req.user.id,
             content
         });
+
+        // Gửi thông báo cho tác giả bài viết
+        if (confession.author && confession.author.toString() !== req.user.id.toString()) {
+            await sendNotification(
+                confession.author,
+                req.user.id,
+                'Bình luận mới',
+                `Ai đó đã bình luận về bài viết của bạn.`,
+                'comment'
+            );
+        }
+
         res.status(201).json({
             success: true,
             data: comment
@@ -35,19 +47,20 @@ exports.createComment = async (req, res) => {
 exports.getComment = async (req, res) => {
     try {
         const confessionId = req.params.confessionId;
-        const comment = Comment.findById(confessionId)
+        const comments = await Comment.find({ confession: confessionId })
             .populate('author', 'name')
-            .sort('-createdAt')
-        if (!comment) {
+            .sort('-createdAt');
+        
+        if (!comments || comments.length === 0) {
             return res.status(404).json({
                 success: false,
                 message: 'Hiện tại confession này không có comment'
             });
-        };
+        }
         res.status(200).json({
             success: true,
-            data: comment
-        })
+            data: comments
+        });
     } catch (error) {
         res.status(500).json({
             success: false,

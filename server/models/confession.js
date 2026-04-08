@@ -33,4 +33,7 @@ const confessionSchema = new mongoose.Schema({
         }
     ]
 }, { timestamps: true });
-module.exports = mongoose.model('Confession', confessionSchema) 
+
+confessionSchema.index({ status: 1, createdAt: -1 });
+
+module.exports = mongoose.model('Confession', confessionSchema);

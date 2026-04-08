@@ -46,7 +46,7 @@ exports.getConfessions = async (req, res) => {
 
     } catch (error) {
         res.status(400).json({
-            success: false, error: error.messsage
+            success: false, error: error.message
         })
     }
 }
@@ -73,7 +73,7 @@ exports.updateConfession = async (req, res) => {
             select: 'name role'
         });
         res.status(200).json({
-            success: false,
+            success: true,
             data: confession
         });
 
@@ -149,7 +149,7 @@ exports.approveConfession = async (req, res) => {
 
     } catch (error) {
         res.status(500).json({
-            message: error.messsage
+            message: error.message
         });
     }
 } 

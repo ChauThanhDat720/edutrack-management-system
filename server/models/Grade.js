@@ -37,4 +37,6 @@ gradeSchema.virtual('averageGrade').get(function () {
     return null;
 });
 
+gradeSchema.index({ student: 1, subject: 1, term: 1 }, { unique: true });
+
 module.exports = mongoose.model('Grade', gradeSchema);

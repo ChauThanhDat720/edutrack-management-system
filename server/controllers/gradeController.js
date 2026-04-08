@@ -52,17 +52,17 @@ exports.getGradesByStudent = async (req, res) => {
             .populate('teacher', 'name')
         if (!grades || grades.length === 0) {
             return res.status('404').json({
-                sucess: false,
+                success: false,
                 error: 'Học sinh chưa có điểm'
             });
         }
         res.status(200).json({
-            sucess: true,
+            success: true,
             data: grades
         });
     } catch (error) {
         return res.status(400).json({
-            sucess: false,
+            success: false,
             error: error
         });
     }
