@@ -31,6 +31,16 @@ const confessionSchema = new mongoose.Schema({
                 default: 'image'
             }
         }
+    ],
+    isAnonymous: {
+        type: Boolean,
+        default: false
+    },
+    likes: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User'
+        }
     ]
 }, { timestamps: true });
 

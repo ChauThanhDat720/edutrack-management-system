@@ -6,6 +6,11 @@ const absenceSchema = new mongoose.Schema({
         type: String,
         required: [true, 'please add reason']
     },
-    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' }
-});
+    status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+    approver: { type: mongoose.Schema.ObjectId, ref: 'User' },
+    note: {
+        type: String,
+        maxlength: [200]
+    }
+}, { timestamps: true });
 module.exports = mongoose.model('Absence', absenceSchema);

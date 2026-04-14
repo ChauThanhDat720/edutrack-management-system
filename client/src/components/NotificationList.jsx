@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
 import { Bell, Check, Clock, X } from 'lucide-react';
 import notificationService from '../utils/notificationService';
+import { SocketContext } from '../context/SocketContext';
+import { useContext } from 'react';
 
 const NotificationList = ({ onClose }) => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const socket = useContext(SocketContext);
 
     const fetchNotifications = async () => {
         try {
@@ -19,7 +22,18 @@ const NotificationList = ({ onClose }) => {
 
     useEffect(() => {
         fetchNotifications();
-    }, []);
+
+        if (socket) {
+            socket.on('new_notification', (newNotif) => {
+                // Thêm thông báo mới vào đầu danh sách
+                setNotifications(prev => [newNotif, ...prev]);
+            });
+
+            return () => {
+                socket.off('new_notification');
+            };
+        }
+    }, [socket]);
 
     const handleMarkAsRead = async (id) => {
         try {
@@ -35,8 +49,8 @@ const NotificationList = ({ onClose }) => {
     const unreadCount = notifications.filter(n => !n.isRead).length;
 
     return (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-            <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-blue-50">
+        <div className="flex flex-col h-full bg-white border-l border-gray-100 animate-in slide-in-from-left duration-300">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between bg-white sticky top-0 z-10">
                 <div className="flex items-center space-x-2">
                     <Bell size={18} className="text-blue-600" />
                     <h3 className="font-bold text-blue-900">Thông báo</h3>
@@ -46,12 +60,12 @@ const NotificationList = ({ onClose }) => {
                         </span>
                     )}
                 </div>
-                <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
-                    <X size={16} />
+                <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 rounded-xl transition-all">
+                    <X size={20} />
                 </button>
             </div>
 
-            <div className="max-h-96 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto">
                 {loading ? (
                     <div className="p-8 text-center text-gray-500">
                         <div className="animate-spin h-6 w-6 border-2 border-blue-500 border-t-transparent rounded-full mx-auto mb-2"></div>
@@ -99,9 +113,9 @@ const NotificationList = ({ onClose }) => {
                 )}
             </div>
             
-            <div className="p-2 border-t border-gray-100 bg-gray-50 text-center">
-                <button className="text-xs text-blue-600 font-medium hover:underline">
-                    Xem tất cả thông báo
+            <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+                <button className="w-full py-3 text-sm text-blue-600 font-bold hover:bg-blue-50 rounded-xl transition-all">
+                    Đánh dấu tất cả là đã đọc
                 </button>
             </div>
         </div>

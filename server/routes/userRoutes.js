@@ -9,9 +9,17 @@ const upload = require('../middleware/uploadMiddleware');
 router.get('/excel-template', protect, authorize('admin'), downloadTemplate);
 router.post('/import-excel', protect, authorize('admin'), upload.single('file'), importFromExcel);
 
-// Tất cả các route dưới đây đều yêu cầu đăng nhập và quyền Admin
+// Các route yêu cầu quyền đăng nhập cơ bản
 router.use(protect);
-router.use(authorize('admin'));
+
+// Route lấy danh sách user: Cho phép Admin và Teacher (để chọn GV chủ nhiệm/bộ môn)
+router.get('/', authorize('admin', 'teacher'), getUsers);
+
+// Các route quản lý User sâu hơn: Chỉ Admin
+router.post('/', authorize('admin'), createUser);
+router.route('/:id')
+    .put(authorize('admin'), updateUser)
+    .delete(authorize('admin'), deleteUser);
 
 /**
  * @swagger
@@ -36,12 +44,4 @@ router.use(authorize('admin'));
  *       403:
  *         description: Forbidden (Admin role required)
  */
-router.route('/')
-    .get(getUsers)
-    .post(createUser);
-
-router.route('/:id')
-    .put(updateUser)
-    .delete(deleteUser);
-
 module.exports = router;

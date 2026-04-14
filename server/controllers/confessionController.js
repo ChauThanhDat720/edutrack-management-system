@@ -2,11 +2,14 @@ const { configDotenv } = require('dotenv');
 const Confession = require('../models/confession');
 const User = require('../models/User');
 const { sendNotification } = require('../utils/notificationHelper');
+const { broadcast } = require('../config/socket');
+const mongoose = require('mongoose');
 // @desc Create new confession
 // @ POST /api/confession
 exports.createConfession = async (req, res) => {
     try {
-        const { title, content } = req.body;
+        const { title, content, isAnonymous: isAnonString } = req.body;
+        const isAnonymous = isAnonString === 'true'
         let mediaData = [];
 
         if (req.files) {
@@ -20,7 +23,7 @@ exports.createConfession = async (req, res) => {
         const newConfession = await Confession.create({
             title,
             content,
-            author: req.user.id,
+            author: isAnonymous ? null : req.user.id,
             media: mediaData
         });
 
@@ -48,6 +51,28 @@ exports.getConfessions = async (req, res) => {
         res.status(400).json({
             success: false, error: error.message
         })
+    }
+}
+
+// @desc Get pending confessions (Admin only)
+// @route GET /api/confession/pending
+exports.getPendingConfessions = async (req, res) => {
+    try {
+        const confessions = await Confession.find({ status: 'pending' })
+            .populate({
+                path: 'author',
+                select: 'name role'
+            })
+            .sort({ createdAt: -1 });
+        res.status(200).json({
+            success: true,
+            data: confessions
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
     }
 }
 exports.updateConfession = async (req, res) => {
@@ -147,9 +172,63 @@ exports.approveConfession = async (req, res) => {
             'Confession'
         )
 
+        // Phát sự kiện Socket cho tất cả mọi người
+        if (status === 'approved') {
+            const populated = await Confession.findById(confession._id).populate('author', 'name role');
+            broadcast('new_approved_confession', populated);
+        }
+
     } catch (error) {
         res.status(500).json({
             message: error.message
         });
+    }
+}
+
+// @desc like confession
+// @route PUT /api/confession/:id/like
+exports.likeConfession = async (req, res) => {
+    try {
+        const confession = await Confession.findById(req.params.id);
+        if (!confession) {
+            return res.status(404).json({ message: 'Không tìm thấy confession' });
+        }
+
+        // Check if already liked
+        const isLiked = confession.likes.includes(req.user.id);
+
+        if (isLiked) {
+            // Unlike
+            confession.likes = confession.likes.filter(id => id.toString() !== req.user.id);
+        } else {
+            // Like
+            confession.likes.push(req.user.id);
+
+            // Send notification to author
+            if (confession.author.toString() !== req.user.id) {
+                sendNotification(
+                    confession.author,
+                    req.user.id,
+                    'Tương tác mới',
+                    'Ai đó đã thích bài viết của bạn',
+                    'like'
+                );
+            }
+        }
+
+        await confession.save();
+
+        // Broadcast update
+        broadcast('update_like', {
+            confessionId: confession._id,
+            likes: confession.likes
+        });
+
+        res.status(200).json({
+            success: true,
+            data: confession.likes
+        });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 } 

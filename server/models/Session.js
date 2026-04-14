@@ -5,6 +5,11 @@ const sessionSchema = new mongoose.Schema({
         ref: 'Class',
         required: true
     },
+    subject: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subject',
+        required: true
+    },
     date: {
         type: Date,
         required: true

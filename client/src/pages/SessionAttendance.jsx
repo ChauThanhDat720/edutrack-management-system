@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { ArrowLeft, Save, CheckCircle, XCircle, Clock, Info, ClipboardCheck } from 'lucide-react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 
@@ -15,6 +15,7 @@ const SessionAttendance = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ text: '', type: '' });
+    const [selectedAbsence, setSelectedAbsence] = useState(null);
 
     const showMessage = (text, type = 'success') => {
         setMessage({ text, type });
@@ -28,10 +29,10 @@ const SessionAttendance = () => {
                 if (res.data.success) {
                     setSessionData(res.data.data.sessionInfo);
                     setStudents(res.data.data.students);
-                    // Initialize attendance data (default: present)
+                    // Initialize attendance data from server
                     const initialAttendance = res.data.data.students.map(s => ({
                         studentId: s._id,
-                        status: 'present'
+                        status: s.status || 'present'
                     }));
                     setAttendanceData(initialAttendance);
                 }
@@ -90,6 +91,7 @@ const SessionAttendance = () => {
     const presentCount = attendanceData.filter(a => a.status === 'present').length;
     const absentCount = attendanceData.filter(a => a.status === 'absent').length;
     const lateCount = attendanceData.filter(a => a.status === 'late').length;
+    const excusedCount = attendanceData.filter(a => a.status === 'excused').length;
 
     return (
         <div className="space-y-6 max-w-4xl mx-auto">
@@ -117,6 +119,7 @@ const SessionAttendance = () => {
                 <div className="flex flex-col items-end gap-1 text-sm bg-gray-50 p-2 rounded-lg border border-gray-200">
                     <span className="text-green-600 font-bold">Có mặt: {presentCount}</span>
                     <span className="text-red-600 font-bold">Vắng: {absentCount}</span>
+                    <span className="text-blue-600 font-bold">Có phép: {excusedCount}</span>
                     <span className="text-yellow-600 font-bold">Muộn: {lateCount}</span>
                 </div>
                 <button
@@ -176,8 +179,23 @@ const SessionAttendance = () => {
                                                         {student.name?.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="font-semibold text-gray-900">{student.name}</p>
-                                                        <p className="text-xs text-gray-500">{student.studentDetails?.studentId || student.email}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <p className="font-semibold text-gray-900">{student.name}</p>
+                                                            {student.hasApprovedAbsence && (
+                                                                <button 
+                                                                    onClick={() => setSelectedAbsence(student)}
+                                                                    className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700 uppercase animate-pulse hover:bg-blue-200 transition-colors"
+                                                                >
+                                                                    <Info size={10} className="mr-0.5" /> Có đơn nghỉ
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500">
+                                                            {student.studentDetails?.studentId || student.email}
+                                                            {student.hasApprovedAbsence && (
+                                                                <span className="ml-2 text-blue-500 italic">({student.absenceReason})</span>
+                                                            )}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -212,6 +230,18 @@ const SessionAttendance = () => {
                                                         <Clock size={20} className="mb-1" />
                                                         <span className="text-xs font-bold">Muộn</span>
                                                     </button>
+
+                                                    <button
+                                                        onClick={() => handleStatusChange(student._id, 'excused')}
+                                                        className={`flex flex-col items-center justify-center w-20 h-16 rounded-lg border-2 transition-all ${currentStatus === 'excused' 
+                                                            ? 'border-blue-500 bg-blue-50 text-blue-700' 
+                                                            : student.hasApprovedAbsence 
+                                                                ? 'border-blue-200 bg-blue-50/30 text-blue-400 border-dashed hover:border-blue-300'
+                                                                : 'border-gray-200 bg-white text-gray-400 hover:border-blue-200'}`}
+                                                    >
+                                                        <ClipboardCheck size={20} className="mb-1" />
+                                                        <span className="text-xs font-bold">Có phép</span>
+                                                    </button>
                                                 </div>
                                             </td>
                                         </tr>
@@ -222,6 +252,47 @@ const SessionAttendance = () => {
                     </table>
                 </div>
             </div>
+
+            {/* Absence Details Modal */}
+            {selectedAbsence && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-blue-600 p-6 text-white">
+                            <h3 className="text-xl font-bold flex items-center gap-2">
+                                <ClipboardCheck size={24} />
+                                Chi tiết đơn xin nghỉ
+                            </h3>
+                            <p className="opacity-80 text-sm mt-1">Học sinh: {selectedAbsence.name}</p>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div>
+                                <p className="text-xs font-bold text-gray-500 uppercase mb-1 tracking-wider">Lý do nghỉ</p>
+                                <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 italic text-gray-700">
+                                    "{selectedAbsence.absenceReason}"
+                                </div>
+                            </div>
+                            
+                            {selectedAbsence.absenceNote && (
+                                <div>
+                                    <p className="text-xs font-bold text-gray-500 uppercase mb-1 tracking-wider">Ghi chú từ người duyệt</p>
+                                    <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 text-blue-800 text-sm">
+                                        {selectedAbsence.absenceNote}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="pt-2">
+                                <button
+                                    onClick={() => setSelectedAbsence(null)}
+                                    className="w-full bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-gray-800 transition-colors"
+                                >
+                                    Đóng cửa sổ
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

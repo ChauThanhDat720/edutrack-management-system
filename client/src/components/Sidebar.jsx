@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Bell, LogOut, BookOpen, Plus, Calendar } from 'lucide-react';
+import { LayoutDashboard, Users, Bell, LogOut, BookOpen, Plus, Calendar, Heart, CalendarX, ClipboardCheck, CheckCircle } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import NotificationList from './NotificationList';
 
@@ -39,6 +39,10 @@ const Sidebar = () => {
                             <Plus size={20} />
                             <span className="font-medium">Đăng thông báo</span>
                         </NavLink>
+                        <NavLink to="/admin/absences" className={getNavLinkClass}>
+                            <ClipboardCheck size={20} />
+                            <span className="font-medium">Duyệt nghỉ phép</span>
+                        </NavLink>
                     </>
                 )}
 
@@ -47,6 +51,14 @@ const Sidebar = () => {
                         <NavLink to="/teacher/classes" className={getNavLinkClass}>
                             <BookOpen size={20} />
                             <span className="font-medium">Quản lý Lớp học</span>
+                        </NavLink>
+                        <NavLink to="/teacher/schedule" className={getNavLinkClass}>
+                            <Calendar size={20} />
+                            <span className="font-medium">Lịch dạy</span>
+                        </NavLink>
+                        <NavLink to="/teacher/absences" className={getNavLinkClass}>
+                            <ClipboardCheck size={20} />
+                            <span className="font-medium">Duyệt nghỉ phép</span>
                         </NavLink>
                     </>
                 )}
@@ -65,12 +77,25 @@ const Sidebar = () => {
                             <BookOpen size={20} />
                             <span className="font-medium">Kết quả học tập</span>
                         </NavLink>
+                        <NavLink to="/student/absences" className={getNavLinkClass}>
+                            <CalendarX size={20} />
+                            <span className="font-medium">Xin nghỉ phép</span>
+                        </NavLink>
+                        <NavLink to="/student/attendance" className={getNavLinkClass}>
+                            <CheckCircle size={20} />
+                            <span className="font-medium">Chuyên cần</span>
+                        </NavLink>
                     </>
                 )}
 
                 <NavLink to="/announcements" className={getNavLinkClass}>
                     <Bell size={20} />
                     <span className="font-medium">Thông báo chung</span>
+                </NavLink>
+
+                <NavLink to="/confessions" className={getNavLinkClass}>
+                    <Heart size={20} />
+                    <span className="font-medium">Góc Tâm Sự</span>
                 </NavLink>
 
                 <button 
@@ -82,7 +107,15 @@ const Sidebar = () => {
                 </button>
                 
                 {showNotifications && (
-                    <NotificationList onClose={() => setShowNotifications(false)} />
+                    <div className="fixed inset-0 z-[100] flex animate-in fade-in duration-300">
+                        <div 
+                            className="absolute inset-0 bg-gray-900/20 backdrop-blur-[2px]" 
+                            onClick={() => setShowNotifications(false)}
+                        ></div>
+                        <div className="relative w-80 h-full ml-64 shadow-2xl overflow-hidden">
+                            <NotificationList onClose={() => setShowNotifications(false)} />
+                        </div>
+                    </div>
                 )}
             </nav>
 

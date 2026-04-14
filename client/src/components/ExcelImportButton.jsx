@@ -27,17 +27,19 @@ const ExcelImportButton = ({ onImportSuccess }) => {
         formData.append('file', file);
 
         try {
+            console.log('[Excel] Uploading file:', file.name);
             const res = await api.post('/users/import-excel', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
+            console.log('[Excel] Import result:', res.data);
             setResult(res.data);
             setShowResult(true);
             if (onImportSuccess) onImportSuccess();
         } catch (err) {
+            console.error('[Excel] Upload error:', err);
             setError(err.response?.data?.message || 'Upload thất bại. Kiểm tra lại file Excel.');
         } finally {
             setUploading(false);
-            // Reset file input so user can upload the same file again
             e.target.value = '';
         }
     };

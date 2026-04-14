@@ -1,6 +1,7 @@
 const Comment = require('../models/comment');
 const Confession = require('../models/confession');
 const { sendNotification } = require('../utils/notificationHelper');
+const { broadcast } = require('../config/socket');
 // @desc create comment
 // route POST /api/v1/comment/:confessionId
 exports.createComment = async (req, res) => {
@@ -35,6 +36,12 @@ exports.createComment = async (req, res) => {
             success: true,
             data: comment
         })
+
+        // Broadcast comment count update or new comment
+        broadcast('new_comment', {
+            confessionId: confessionId,
+            comment: comment
+        });
     } catch (error) {
         res.status(500).json({
             success: false,

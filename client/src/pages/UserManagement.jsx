@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { Search, Plus, Edit, Trash2, ShieldAlert, X, GraduationCap, Presentation, Mail, Lock } from 'lucide-react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
+import { SocketContext } from '../context/SocketContext';
 import ExcelImportButton from '../components/ExcelImportButton';
 
 // ─── Create User Modal ───────────────────────────────────────────────────────
@@ -184,6 +185,7 @@ const CreateUserModal = ({ onClose, onCreated }) => {
 
 const UserManagement = () => {
     const { user } = useContext(AuthContext);
+    const { socket } = useContext(SocketContext);
 
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -212,6 +214,18 @@ const UserManagement = () => {
     useEffect(() => {
         fetchUsers();
     }, [filterRole]);
+
+    // Lắng nghe sự kiện đồng bộ từ Socket.io
+    useEffect(() => {
+        if (socket) {
+            socket.on('users_updated', (data) => {
+                console.log('[Socket] Users updated:', data.message);
+                fetchUsers(); // Tự động load lại danh sách khi có thay đổi từ bất kỳ đâu (Excel import, create, v.v.)
+            });
+
+            return () => socket.off('users_updated');
+        }
+    }, [socket]);
 
     const handleDelete = async (id, name) => {
         if (!window.confirm(`Are you sure you want to delete user ${name}?`)) return;

@@ -1,6 +1,8 @@
 import React, { useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, AuthContext } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
+import { Toaster } from 'react-hot-toast';
 
 import Layout from './components/Layout';
 import Login from './pages/Login';
@@ -13,9 +15,14 @@ import ClassManagement from './pages/ClassManagement';
 import ClassDetail from './pages/ClassDetail';
 import SessionAttendance from './pages/SessionAttendance';
 import StudentSchedule from './pages/StudentSchedule';
+import TeacherSchedule from './pages/TeacherSchedule';
 
 import GradeManagement from './pages/GradeManagement';
 import MyGrades from './pages/MyGrades';
+import Confessions from './pages/Confessions';
+import StudentAbsences from './pages/StudentAbsences';
+import ManageAbsences from './pages/ManageAbsences';
+import StudentAttendance from './pages/StudentAttendance';
 
 // ─── Base Protected Route ────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }) => {
@@ -63,8 +70,10 @@ const Unauthorized = () => (
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
+      <SocketProvider>
+        <Toaster position="top-right" reverseOrder={false} />
+        <Router>
+          <Routes>
           {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/unauthorized" element={<Unauthorized />} />
@@ -73,6 +82,7 @@ function App() {
           <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="announcements" element={<Announcements />} />
+            <Route path="confessions" element={<Confessions />} />
           </Route>
 
           {/* ── Admin-only routes ── */}
@@ -85,15 +95,19 @@ function App() {
             <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="classes/:id/grades" element={<GradeManagement />} />
             <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
+            <Route path="absences" element={<ManageAbsences />} />
           </Route>
 
           {/* ── Teacher-only routes ── */}
           <Route path="/teacher" element={<RoleProtectedRoute allowedRoles={['teacher']}><Layout /></RoleProtectedRoute>}>
             <Route index element={<Dashboard />} />
             <Route path="classes" element={<ClassManagement />} />
+            <Route path="schedule" element={<TeacherSchedule />} />
+            <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="classes/:id/grades" element={<GradeManagement />} />
             <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
+            <Route path="absences" element={<ManageAbsences />} />
           </Route>
 
           {/* ── Student-only routes ── */}
@@ -103,13 +117,16 @@ function App() {
             <Route path="classes/:id" element={<ClassDetail />} />
             <Route path="schedule" element={<StudentSchedule />} />
             <Route path="grades" element={<MyGrades />} />
+            <Route path="absences" element={<StudentAbsences />} />
+            <Route path="attendance" element={<StudentAttendance />} />
           </Route>
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </Router>
+        </Router>
+      </SocketProvider>
     </AuthProvider>
   );
 }

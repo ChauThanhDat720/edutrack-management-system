@@ -1,15 +1,15 @@
 const Absence = require('../models/absenceRequest');
-const User = require('../models/User')
+const User = require('../models/User');
+const { authorize, protect } = require('../middleware/authMiddleware');
 /// desc create
 /// router POST /api/Absence
 exports.createAbsence = async (req, res) => {
     try {
-        const { reason, date, status } = req.body;
+        const { reason, date, } = req.body;
         const absence = await Absence.create({
             student: req.user.id,
             reason,
             date,
-            status
         });
         res.status(200).json({
             success: true,
@@ -26,20 +26,9 @@ exports.createAbsence = async (req, res) => {
 // @router PUT /api/Absence/:id
 exports.approveAbsence = async (req, res) => {
     try {
-        const { status } = req.body;
-        if (!['approved', 'rejected'].includes(status)) {
-            return res.status(400).json({
-                message: 'Trạng thái không hợp lệ'
-            })
-        }
-        if (req.user.role !== 'admin') {
-            return res.status(401).json({
-                success: false,
-                message: 'Bạn không quyền truy cập'
-            });
-        }
+        const { status, note } = req.body;
         const absence = await Absence.findByIdAndUpdate(req.params.id,
-            { status },
+            { status, note, approver: req.user.id },
             { new: true, runValidators: true }
         );
         if (!absence) {
@@ -58,5 +47,55 @@ exports.approveAbsence = async (req, res) => {
             message: error.message
         });
 
+    }
+}
+exports.getMyAbsences = async (req, res) => {
+
+    try {
+        const absence = await Absence.find({ student: req.user.id }).sort({ date: -1 })
+        res.status(200).json({
+            success: true,
+            count: absence.length,
+            data: absence
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Không thể truy suất danh sách vắng mặt'
+        });
+    }
+}
+exports.getAllAbsences = async (req, res) => {
+    try {
+        let query = {};
+        if (req.query.date) {
+            query.date = req.query.date;
+        }
+        if (req.query.status) {
+            query.status = req.query.status
+        }
+        const absence = await Absence.find(query)
+            .populate('student', 'name studentDetails.className')
+            .sort({ date: -1 });
+        res.status(200).json({ success: true, count: absence.length, data: absence });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+}
+exports.deleteAbsence = async (req, res) => {
+    try {
+        const absence = await Absence.findById(req.params.id);
+        if (!absence) {
+            return res.status(404).json({ message: 'Không tìm thấy đơn' });
+        }
+
+        if (absence.student.toString() !== req.user.id && req.user.role !== 'admin') {
+            return res.status(401).json({ message: 'Không có quyền xóa' });
+        }
+        await absence.deleteOne();
+        res.status(200).json({ success: true, message: 'Đã xóa đơn' });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 }

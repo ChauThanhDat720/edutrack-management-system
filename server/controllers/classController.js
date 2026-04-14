@@ -92,7 +92,17 @@ exports.createClass = async (req, res) => {
 // @access  Admin, Teacher
 exports.getClasses = async (req, res) => {
     try {
-        const classes = await Class.find()
+        let query = {};
+
+        // Phân quyền lọc dữ liệu
+        if (req.user.role === 'teacher') {
+            query = { teacher: req.user.id };
+        } else if (req.user.role === 'student') {
+            query = { students: req.user.id };
+        }
+        // Admin sẽ không bị lọc (query = {})
+
+        const classes = await Class.find(query)
             .populate('teacher', 'name email teacherDetails.subject')
             .populate('students', 'name email studentDetails.studentId');
 
@@ -263,3 +273,4 @@ exports.generateClassSessions = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
