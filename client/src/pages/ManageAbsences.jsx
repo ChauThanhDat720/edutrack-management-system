@@ -151,25 +151,44 @@ const ManageAbsences = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 max-w-xs">
-                                        <p className="text-sm text-gray-600 truncate" title={item.reason}>{item.reason}</p>
+                                        <div className="flex flex-col space-y-2">
+                                            <p className="text-sm text-gray-600 truncate" title={item.reason}>{item.reason}</p>
+                                            {item.isAppealed && (
+                                                <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-xl relative overflow-hidden group/appeal">
+                                                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-400"></div>
+                                                    <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1 flex items-center gap-1">
+                                                        <MessageSquare size={10} />
+                                                        Học sinh giải trình
+                                                    </p>
+                                                    <p className="text-xs text-blue-700 font-medium italic line-clamp-3" title={item.studentReply}>
+                                                        "{item.studentReply}"
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        {item.status === 'approved' && (
-                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-green-100 text-green-700">Đã duyệt</span>
-                                        )}
-                                        {item.status === 'rejected' && (
-                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-700">Bị từ chối</span>
-                                        )}
-                                        {item.status === 'pending' && (
-                                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-yellow-100 text-yellow-700">Đang chờ</span>
-                                        )}
+                                        <div className="flex flex-col space-y-1">
+                                            {item.status === 'approved' && (
+                                                <span className="w-fit px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-green-100 text-green-700">Đã duyệt</span>
+                                            )}
+                                            {item.status === 'rejected' && (
+                                                <span className="w-fit px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-red-100 text-red-700">Bị từ chối</span>
+                                            )}
+                                            {item.status === 'pending' && (
+                                                <span className="w-fit px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-yellow-100 text-yellow-700">Đang chờ</span>
+                                            )}
+                                            {item.isAppealed && item.status === 'pending' && (
+                                                <span className="w-fit px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-blue-100 text-blue-700 animate-pulse">Phúc đáp</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         {item.status === 'pending' ? (
                                             <div className="flex justify-end space-x-2">
                                                 <button
                                                     onClick={() => handleApprove(item._id)}
-                                                    className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors"
+                                                    className="p-1.5 bg-green-50 text-green-600 hover:bg-green-100 rounded-lg transition-colors shadow-sm"
                                                     title="Duyệt đơn"
                                                 >
                                                     <CheckCircle2 size={18} />
@@ -179,7 +198,7 @@ const ManageAbsences = () => {
                                                         setSelectedId(item._id);
                                                         setShowRejectModal(true);
                                                     }}
-                                                    className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                                                    className="p-1.5 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg transition-colors shadow-sm"
                                                     title="Từ chối"
                                                 >
                                                     <XCircle size={18} />

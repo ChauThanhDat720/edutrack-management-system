@@ -49,6 +49,48 @@ exports.approveAbsence = async (req, res) => {
 
     }
 }
+exports.responseAbsence = async (req, res) => {
+    try {
+        const { studentReply } = req.body;
+        const absence = await Absence.findById(req.params.id);
+
+        if (!absence) {
+            return res.status(404).json({
+                message: 'Không tìm thấy đơn xin phép này'
+            });
+        }
+
+
+        if (absence.student.toString() !== req.user.id) {
+            return res.status(401).json({
+                message: 'Bạn không có quyền phản hồi đơn này'
+            });
+        }
+
+
+        if (absence.status !== 'rejected') {
+            return res.status(400).json({
+                message: 'Chỉ có thể phản hồi đơn đã bị từ chối'
+            });
+        }
+
+        absence.studentReply = studentReply;
+        absence.status = 'pending';
+        absence.isAppealed = true;
+
+        await absence.save();
+
+        res.status(200).json({
+            success: true,
+            data: absence
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            message: error.message
+        });
+    }
+}
 exports.getMyAbsences = async (req, res) => {
 
     try {

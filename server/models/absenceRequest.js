@@ -11,6 +11,14 @@ const absenceSchema = new mongoose.Schema({
     note: {
         type: String,
         maxlength: [200]
+    },
+    studentReply: {
+        type: String,
+    },
+    isAppealed: {
+        type: Boolean,
+        default: false
     }
+
 }, { timestamps: true });
 module.exports = mongoose.model('Absence', absenceSchema);
