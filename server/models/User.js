@@ -1,11 +1,14 @@
 
 const mongoose = require('mongoose');
+const mongoosePaginate = require('mongoose-paginate-v2');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
     name: { type: String, required: [true, 'Please add a name'] },
     email: {
         type: String,
+        index: true,
+        unique: true,
         required: [true, 'Please add an email'],
         unique: true,
         match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
@@ -18,7 +21,7 @@ const userSchema = new mongoose.Schema({
         gender: { type: String, enum: ['Male', 'Female', 'Other'] }
     },
     studentDetails: {
-        studentId: { type: String, unique: true, sparse: true },
+        studentId: { type: String, unique: true, sparse: true, index: true },
         grade: { type: Number, min: 1, max: 12 },
         className: { type: String, default: null },
         class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class', default: null },
@@ -40,7 +43,7 @@ userSchema.pre('save', async function () {
 userSchema.methods.matchPassword = async function (enteredPassword) {
     return await bcrypt.compare(enteredPassword, this.password);
 };
-
+userSchema.plugin(mongoosePaginate);
 userSchema.index({ role: 1 });
 userSchema.index({ 'studentDetails.className': 1 });
 

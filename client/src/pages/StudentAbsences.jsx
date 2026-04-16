@@ -139,14 +139,14 @@ const StudentAbsences = () => {
                     {absences.map((item) => (
                         <div key={item._id} className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 hover:shadow-xl hover:shadow-blue-500/5 transition-all relative overflow-hidden group">
                             <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-50/50 to-transparent -mr-12 -mt-12 rounded-full group-hover:scale-110 transition-transform duration-500"></div>
-                            
+
                             <div className="flex justify-between items-start mb-5 relative z-10">
                                 <div className="bg-blue-50 p-2.5 rounded-xl text-blue-600">
                                     <CalendarDays size={22} />
                                 </div>
                                 {getStatusBadge(item.status)}
                             </div>
-                            
+
                             <div className="space-y-4 relative z-10">
                                 <div>
                                     <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Ngày nghỉ</label>
@@ -166,9 +166,9 @@ const StudentAbsences = () => {
                                             Phản hồi từ giáo viên
                                         </p>
                                         <p className="text-xs text-slate-600 italic leading-relaxed">"{item.note}"</p>
-                                        
+
                                         {item.status === 'rejected' && !item.isAppealed && (
-                                            <button 
+                                            <button
                                                 onClick={() => {
                                                     setSelectedId(item._id);
                                                     setShowReplyModal(true);
@@ -188,18 +188,18 @@ const StudentAbsences = () => {
                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-300"></div>
                                             Bạn đã giải trình
                                         </p>
-                                        <p className="text-xs text-blue-700 leading-relaxed font-medium">"{item.studentReply}"</p>
+                                        <p className="text-xs text-blue-700 leading-relaxed font-medium">{item.studentReply}</p>
                                         {item.status === 'pending' && (
                                             <p className="text-[9px] text-blue-400 mt-2 italic">* Đang chờ giáo viên duyệt lại</p>
                                         )}
                                     </div>
                                 )}
                             </div>
-                            
+
                             <div className="mt-6 pt-4 border-t border-gray-50 flex items-center justify-between relative z-10 text-[10px] font-medium text-gray-400">
                                 <span>Gửi lúc: {new Date(item.createdAt).toLocaleString('vi-VN')}</span>
                                 {item.status === 'pending' && !item.isAppealed && (
-                                    <button 
+                                    <button
                                         className="text-red-400 hover:text-red-600 transition-colors p-1.5 hover:bg-red-50 rounded-lg"
                                         title="Xóa đơn"
                                         onClick={() => handleDelete(item._id)}
@@ -224,7 +224,7 @@ const StudentAbsences = () => {
                                 <XCircle size={24} />
                             </button>
                         </div>
-                        
+
                         <form onSubmit={handleSubmit} className="p-6 space-y-5">
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Ngày xin nghỉ</label>
@@ -237,7 +237,7 @@ const StudentAbsences = () => {
                                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Lý do nghỉ</label>
                                 <textarea
@@ -257,7 +257,7 @@ const StudentAbsences = () => {
                                     Đơn của bạn sẽ được gửi tới Giáo viên/Admin để xét duyệt. Vui lòng gửi đơn trước ngày nghỉ ít nhất 24h nếu có thể.
                                 </p>
                             </div>
-                            
+
                             <div className="flex space-x-3 pt-2">
                                 <button
                                     type="button"
@@ -298,7 +298,7 @@ const StudentAbsences = () => {
                                 <XCircle size={24} />
                             </button>
                         </div>
-                        
+
                         <form onSubmit={handleReplySubmit} className="p-6 space-y-5">
                             <div>
                                 <label className="block text-sm font-bold text-slate-700 mb-1.5">Nội dung giải thích thêm</label>

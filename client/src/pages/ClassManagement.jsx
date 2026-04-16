@@ -284,7 +284,7 @@ const ClassManagement = () => {
 
     const fetchTeachers = async () => {
         try {
-            const res = await api.get('/users?role=teacher');
+            const res = await api.get('/users?role=teacher&pagination=false');
             setTeachers(res.data.data);
         } catch (error) {
             console.error("Không thể tải danh sách giáo viên", error);

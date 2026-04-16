@@ -39,6 +39,7 @@ app.use('/api/confession', require('./routes/confessionRoutes'));
 app.use('/api/comment', require('./routes/commentRoutes'));
 app.use('/api/absence', require('./routes/absenceRoutes'));
 app.use('/api/subjects', require('./routes/subjectRoutes'));
+app.use('/api/conducts', require('./routes/conductRoutes'));
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {

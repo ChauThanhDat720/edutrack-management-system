@@ -57,7 +57,7 @@ exports.getComment = async (req, res) => {
         const comments = await Comment.find({ confession: confessionId })
             .populate('author', 'name')
             .sort('-createdAt');
-        
+
         if (!comments || comments.length === 0) {
             return res.status(404).json({
                 success: false,

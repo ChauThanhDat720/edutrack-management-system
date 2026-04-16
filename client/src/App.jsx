@@ -16,6 +16,7 @@ import ClassDetail from './pages/ClassDetail';
 import SessionAttendance from './pages/SessionAttendance';
 import StudentSchedule from './pages/StudentSchedule';
 import TeacherSchedule from './pages/TeacherSchedule';
+import ConductManagement from './pages/ConductManagement';
 
 import GradeManagement from './pages/GradeManagement';
 import MyGrades from './pages/MyGrades';
@@ -96,6 +97,7 @@ function App() {
             <Route path="classes/:id/grades" element={<GradeManagement />} />
             <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
             <Route path="absences" element={<ManageAbsences />} />
+            <Route path="conduct" element={<ConductManagement />} />
           </Route>
 
           {/* ── Teacher-only routes ── */}
@@ -108,6 +110,7 @@ function App() {
             <Route path="classes/:id/grades" element={<GradeManagement />} />
             <Route path="classes/:id/sessions/:sessionId/attendance" element={<SessionAttendance />} />
             <Route path="absences" element={<ManageAbsences />} />
+            <Route path="conduct" element={<ConductManagement />} />
           </Route>
 
           {/* ── Student-only routes ── */}

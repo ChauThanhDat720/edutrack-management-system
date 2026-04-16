@@ -185,13 +185,17 @@ const CreateUserModal = ({ onClose, onCreated }) => {
 
 const UserManagement = () => {
     const { user } = useContext(AuthContext);
-    const { socket } = useContext(SocketContext);
+    const socket = useContext(SocketContext);
 
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [filterRole, setFilterRole] = useState('all'); // 'all', 'teacher', 'student'
     const [searchTerm, setSearchTerm] = useState('');
     const [showCreateModal, setShowCreateModal] = useState(false);
+    
+    // Pagination states
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     const [errorMsg, setErrorMsg] = useState('');
     const [successMsg, setSuccessMsg] = useState('');
@@ -199,9 +203,14 @@ const UserManagement = () => {
     const fetchUsers = async () => {
         setLoading(true);
         try {
-            const url = filterRole === 'all' ? '/users' : `/users?role=${filterRole}`;
+            const url = filterRole === 'all' 
+                ? `/users?page=${currentPage}&limit=10` 
+                : `/users?role=${filterRole}&page=${currentPage}&limit=10`;
             const res = await api.get(url);
             setUsers(res.data.data);
+            if (res.data.totalPages) {
+                setTotalPages(res.data.totalPages);
+            }
             setErrorMsg('');
         } catch (error) {
             console.error("Failed to fetch users", error);
@@ -213,7 +222,7 @@ const UserManagement = () => {
 
     useEffect(() => {
         fetchUsers();
-    }, [filterRole]);
+    }, [filterRole, currentPage]);
 
     // Lắng nghe sự kiện đồng bộ từ Socket.io
     useEffect(() => {
@@ -299,7 +308,7 @@ const UserManagement = () => {
                     {['all', 'teacher', 'student'].map((role) => (
                         <button
                             key={role}
-                            onClick={() => setFilterRole(role)}
+                            onClick={() => { setFilterRole(role); setCurrentPage(1); }}
                             className={`px-4 py-2 rounded-md text-sm font-medium capitalize transition-colors ${filterRole === role
                                 ? 'bg-white text-blue-700 shadow-sm'
                                 : 'text-gray-500 hover:text-gray-700'
@@ -408,6 +417,30 @@ const UserManagement = () => {
                         </tbody>
                     </table>
                 </div>
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
+                    <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+                        <div className="text-sm text-gray-500">
+                            Trang <span className="font-medium text-gray-900">{currentPage}</span> / <span className="font-medium text-gray-900">{totalPages}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                className={`px-3 py-1 text-sm font-medium rounded-md border ${currentPage === 1 ? 'text-gray-400 bg-gray-100 cursor-not-allowed border-gray-200' : 'text-gray-700 bg-white hover:bg-gray-50 border-gray-300'}`}
+                            >
+                                Trước
+                            </button>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                className={`px-3 py-1 text-sm font-medium rounded-md border ${currentPage === totalPages ? 'text-gray-400 bg-gray-100 cursor-not-allowed border-gray-200' : 'text-gray-700 bg-white hover:bg-gray-50 border-gray-300'}`}
+                            >
+                                Sau
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Create Modal */}

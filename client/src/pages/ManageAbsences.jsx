@@ -161,7 +161,7 @@ const ManageAbsences = () => {
                                                         Học sinh giải trình
                                                     </p>
                                                     <p className="text-xs text-blue-700 font-medium italic line-clamp-3" title={item.studentReply}>
-                                                        "{item.studentReply}"
+                                                        {item.studentReply}
                                                     </p>
                                                 </div>
                                             )}
