@@ -1,24 +1,26 @@
 const Grade = require('../models/Grade');
 const User = require('../models/User');
-const Class = require('../models/Class')
-const { sendNotification } = require('../utils/notificationHelper')
+const Class = require('../models/Class');
+const mongoose = require('mongoose');
+const { sendNotification } = require('../utils/notificationHelper');
 // @desc    Nhập hoặc cập nhật điểm cho học sinh
 // @route   POST /api/grades
 exports.updateStudentGrade = async (req, res) => {
+    const session = await mongoose.startSession();
+    session.startTransaction();
     try {
         const { studentId, subject, term, oralGrade, midtermGrade, finalGrade } = req.body;
 
-        let grade = await Grade.findOne({ student: studentId, subject, term });
+        let grade = await Grade.findOne({ student: studentId, subject, term }).session(session);
 
         if (grade) {
             grade.oralGrade = oralGrade;
             grade.midtermGrade = midtermGrade;
             grade.finalGrade = finalGrade;
             grade.lastUpdatedBy = req.user.id;
-            await grade.save();
+            await grade.save({ session });
         } else {
-
-            grade = await Grade.create({
+            const [newGrade] = await Grade.create([{
                 student: studentId,
                 teacher: req.user.id,
                 subject,
@@ -26,18 +28,25 @@ exports.updateStudentGrade = async (req, res) => {
                 oralGrade,
                 midtermGrade,
                 finalGrade
-            });
+            }], { session });
+            grade = newGrade;
         }
+
+        await session.commitTransaction();
+        session.endSession();
+
         sendNotification(
             studentId,
             req.user.id,
             `Cập nhật điểm môn ${subject}`,
             `Chào bạn, giáo viên vừa cập nhật điểm ${term} cho bạn. Hãy kiểm tra ngay!`,
             'GRADE_UPDATE'
-        )
+        );
 
         res.status(200).json({ success: true, data: grade });
     } catch (error) {
+        await session.abortTransaction();
+        session.endSession();
         res.status(400).json({ success: false, error: error.message });
     }
 };

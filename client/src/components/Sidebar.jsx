@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Bell, LogOut, BookOpen, Plus, Calendar, Heart, CalendarX, ClipboardCheck, CheckCircle, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, Users, Bell, LogOut, BookOpen, Plus, Calendar, Heart, CalendarX, ClipboardCheck, CheckCircle, ShieldAlert, CalendarCheck } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
 import NotificationList from './NotificationList';
 
@@ -47,6 +47,10 @@ const Sidebar = () => {
                             <ShieldAlert size={20} />
                             <span className="font-medium">Hạnh kiểm</span>
                         </NavLink>
+                        <NavLink to="/admin/reschedule" className={getNavLinkClass}>
+                            <CalendarCheck size={20} />
+                            <span className="font-medium">Duyệt Dời Buổi</span>
+                        </NavLink>
                     </>
                 )}
 
@@ -67,6 +71,10 @@ const Sidebar = () => {
                         <NavLink to="/teacher/conduct" className={getNavLinkClass}>
                             <ShieldAlert size={20} />
                             <span className="font-medium">Hạnh kiểm</span>
+                        </NavLink>
+                        <NavLink to="/teacher/reschedule" className={getNavLinkClass}>
+                            <CalendarCheck size={20} />
+                            <span className="font-medium">Xin Dời Buổi Dạy</span>
                         </NavLink>
                     </>
                 )}

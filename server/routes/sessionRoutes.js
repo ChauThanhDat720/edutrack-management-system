@@ -13,7 +13,7 @@ router.get('/student/attendance', authorize('student'), getStudentAttendance);
 router.get('/available-teachers', authorize('teacher', 'admin'), getAvailableTeachers);
 router.get('/class/:classId', authorize('teacher', 'admin'), getSessionsByClass);
 router.get('/:sessionId/students', authorize('teacher', 'admin'), getAttendanceSheet);
-router.post('/:sessionId/atten  dance', authorize('teacher', 'admin'), submitAttendance);
+router.post('/:sessionId/attendance', authorize('teacher', 'admin'), submitAttendance);
 
 // Routes for specific roles
 router.get('/my-schedule', authorize('teacher'), getMySchedule);

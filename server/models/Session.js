@@ -8,7 +8,7 @@ const sessionSchema = new mongoose.Schema({
     subject: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Subject',
-        required: true
+        // required: true
     },
     date: {
         type: Date,
@@ -31,6 +31,10 @@ const sessionSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
         required: true
+    },
+    room: {
+        type: String,
+        default: null
     }
 }, { timestamps: true });
 

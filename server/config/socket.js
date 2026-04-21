@@ -12,23 +12,31 @@ const init = (server) => {
 
     io.on('connection', (socket) => {
         console.log('A user connected:', socket.id);
+        let currentUserId = null;
 
         // Client will send 'join' event with userId
         socket.on('join', (userId) => {
             if (userId) {
-                userSockets.set(userId, socket.id);
-                console.log(`User ${userId} joined with socket ${socket.id}`);
+                currentUserId = userId.toString();
+                if (!userSockets.has(currentUserId)) {
+                    userSockets.set(currentUserId, new Set());
+                }
+                userSockets.get(currentUserId).add(socket.id);
+                console.log(`User ${currentUserId} joined with socket ${socket.id}`);
             }
+
         });
 
         socket.on('disconnect', () => {
-            // Remove user from mapping
-            for (let [userId, socketId] of userSockets.entries()) {
-                if (socketId === socket.id) {
-                    userSockets.delete(userId);
-                    console.log(`User ${userId} disconnected`);
-                    break;
+            if (currentUserId && userSockets.has(currentUserId)) {
+                const sockets = userSockets.get(currentUserId);
+                sockets.delete(socket.id);
+
+                // Nếu không còn thiết bị nào online, xóa luôn userId khỏi Map
+                if (sockets.size === 0) {
+                    userSockets.delete(currentUserId);
                 }
+                console.log(`Socket ${socket.id} of User ${currentUserId} disconnected`);
             }
         });
     });
@@ -44,9 +52,11 @@ const getIO = () => {
 };
 
 const sendToUser = (userId, event, data) => {
-    const socketId = userSockets.get(userId.toString());
-    if (socketId) {
-        io.to(socketId).emit(event, data);
+    const sockets = userSockets.get(userId.toString());
+    if (sockets && sockets.size > 0) {
+        sockets.forEach(socketId => {
+            io.to(socketId).emit(event, data);
+        });
         return true;
     }
     return false;

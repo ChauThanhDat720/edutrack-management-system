@@ -13,6 +13,7 @@ exports.createConductRecord = async (req, res) => {
             recordedBy
         });
         await newRecord.save();
+
         const updateStudent = await User.findByIdAndUpdate(studentId,
             { $inc: { conductScore: pointAdjustment } },
             { new: true }
@@ -28,6 +29,11 @@ exports.createConductRecord = async (req, res) => {
             record: newRecord,
             update: updateStudent.conductScore
         })
+        socketIO.sendToUser(newRecord.studentId, 'new_conduct_record', {
+            title: 'Thông báo hạnh kiểm',
+            message: `Bạn vừa bị lập phiếu: ${newRecord.content}`,
+            type: newRecord.type
+        });
     } catch (error) {
         res.status(500).json({
             error: error.message
@@ -83,7 +89,7 @@ exports.getStudentConductRecord = async (req, res) => {
             });
         }
         const conductRecord = await Conduct.find({ studentId: student }).lean();
-        if (!conductRecord) {
+        if (conductRecord.length === 0) {
             return res.status(404).json({
                 success: true,
                 message: 'Hiện học sinh sinh chưa có đơn nào'
