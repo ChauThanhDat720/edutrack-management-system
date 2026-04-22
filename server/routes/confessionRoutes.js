@@ -10,7 +10,7 @@ const {
     likeConfession 
 } = require('../controllers/confessionController');
 const { authorize, protect } = require('../middleware/authMiddleware')
-const uploadCloud = require('../config/cloudinary')
+const uploadCloud = require('../middleware/cloudinaryMiddleware')
 
 // Base route: /api/confession
 router.post('/', protect, uploadCloud.array('files', 5), createConfession)

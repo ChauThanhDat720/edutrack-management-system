@@ -14,7 +14,7 @@ const notificationSchema = new mongoose.Schema({
     message: { type: String, required: true },
     type: {
         type: String,
-        enum: ['GRADE_UPDATE', 'ATTENDANCE_ABSENT', 'SYSTEM', 'ANNOUNCEMENT'],
+        enum: ['GRADE_UPDATE', 'ATTENDANCE_ABSENT', 'SYSTEM', 'ANNOUNCEMENT', 'RESCHEDULE'],
         required: true
     },
     isRead: { type: Boolean, default: false },

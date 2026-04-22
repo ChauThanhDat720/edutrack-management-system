@@ -23,7 +23,8 @@ exports.createConfession = async (req, res) => {
         const newConfession = await Confession.create({
             title,
             content,
-            author: isAnonymous ? null : req.user.id,
+            author: req.user.id,
+            isAnonymous,
             media: mediaData
         });
 
@@ -36,16 +37,25 @@ exports.createConfession = async (req, res) => {
 // @route GET/api/confession
 exports.getConfessions = async (req, res) => {
     try {
-        const confession = await Confession.find({ status: 'approved' })
+        const confessions = await Confession.find({ status: 'approved' })
             .populate({
                 path: 'author',
                 select: 'name role'
             })
             .sort({ createdAt: -1 });
+
+        const processedConfessions = confessions.map(c => {
+            const doc = c.toObject();
+            if (doc.isAnonymous) {
+                doc.author = { name: 'Người dùng ẩn danh', role: 'student' };
+            }
+            return doc;
+        });
+
         res.status(200).json({
             success: true,
-            data: confession
-        })
+            data: processedConfessions
+        });
 
     } catch (error) {
         res.status(400).json({

@@ -26,6 +26,7 @@ import ManageAbsences from './pages/ManageAbsences';
 import StudentAttendance from './pages/StudentAttendance';
 import RescheduleRequest from './pages/RescheduleRequest';
 import ManageReschedule from './pages/ManageReschedule';
+import SystemLogs from './pages/SystemLogs';
 
 // ─── Base Protected Route ────────────────────────────────────────────────────
 const ProtectedRoute = ({ children }) => {
@@ -101,6 +102,7 @@ function App() {
             <Route path="absences" element={<ManageAbsences />} />
             <Route path="conduct" element={<ConductManagement />} />
             <Route path="reschedule" element={<ManageReschedule />} />
+            <Route path="logs" element={<SystemLogs />} />
           </Route>
 
           {/* ── Teacher-only routes ── */}

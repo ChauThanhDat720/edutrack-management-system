@@ -1,7 +1,8 @@
 const Session = require('../models/Session');
 const RescheduleRequest = require('../models/RescheduleRequest');
 const mongoose = require('mongoose');
-
+const { logActivity } = require('../utils/activityLogger');
+const { sendNotification } = require('../utils/notificationHelper');
 // @desc    Giáo viên tạo đơn xin dời buổi dạy
 // @route   POST /api/reschedule
 // @access  Teacher
@@ -11,6 +12,9 @@ exports.createRescheduleRequest = async (req, res) => {
         const requestedBy = req.user.id;
 
         const session = await Session.findById(sessionId);
+        const teacher = session.teacher;
+        const sessionOld = await Session.findById(teacher)
+
         if (!session) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy buổi học' });
         }
@@ -24,9 +28,48 @@ exports.createRescheduleRequest = async (req, res) => {
         if (existing) {
             return res.status(400).json({ success: false, message: 'Đã có đơn xin dời đang chờ duyệt cho buổi học này' });
         }
-        if (newDate && new Date(newDate) < new Date()) {
-            return res.status(400).json({ success: false, message: 'Ngày dời phải là ngày trong tương lai' });
+
+        // Kiểm tra xung đột lịch dạy/học cho thời gian mới đề xuất
+        const proposedDate = newDate ? new Date(newDate) : new Date(session.date);
+        proposedDate.setHours(0, 0, 0, 0);
+        const nextDay = new Date(proposedDate);
+        nextDay.setDate(proposedDate.getDate() + 1);
+
+        const proposedStartTime = newStartTime || session.startTime;
+        const proposedEndTime = newEndTime || session.endTime;
+        const proposedRoom = newRoom || session.room;
+
+        const overlapQuery = {
+            _id: { $ne: sessionId },
+            date: { $gte: proposedDate, $lt: nextDay },
+            status: { $ne: 'cancelled' },
+            $or: [
+                { startTime: { $lte: proposedStartTime }, endTime: { $gt: proposedStartTime } },
+                { startTime: { $lt: proposedEndTime }, endTime: { $gte: proposedEndTime } },
+                { startTime: { $gte: proposedStartTime }, endTime: { $lte: proposedEndTime } }
+            ]
+        };
+
+
+        const teacherConflict = await Session.findOne({ ...overlapQuery, teacher: requestedBy });
+        if (teacherConflict) {
+            return res.status(400).json({ success: false, message: 'Bạn đã có một buổi dạy khác trùng với thời gian đề xuất này' });
         }
+
+
+        const classConflict = await Session.findOne({ ...overlapQuery, classId: session.classId });
+        if (classConflict) {
+            return res.status(400).json({ success: false, message: 'Lớp học hiện đã có lịch học khác trong khung giờ này' });
+        }
+
+
+        if (proposedRoom) {
+            const roomConflict = await Session.findOne({ ...overlapQuery, room: proposedRoom });
+            if (roomConflict) {
+                return res.status(400).json({ success: false, message: `Phòng ${proposedRoom} đã được sử dụng bởi một lớp khác trong khung giờ này` });
+            }
+        }
+
         const request = await RescheduleRequest.create({
             sessionId,
             requestedBy,
@@ -176,10 +219,10 @@ exports.approveRescheduleRequest = async (req, res) => {
             status: 'scheduled'
         }], { session });
 
-        // Đánh dấu buổi cũ là đã bị huỷ (dời)
+
         await Session.findByIdAndUpdate(oldSession._id, { status: 'cancelled' }, { session });
 
-        // Cập nhật trạng thái đơn
+
         request.status = 'approved';
         request.reviewedBy = reviewedBy;
         request.reviewNote = reviewNote || '';
@@ -188,6 +231,19 @@ exports.approveRescheduleRequest = async (req, res) => {
 
         await session.commitTransaction();
         session.endSession();
+
+        // lưu nhật ký hệ thống
+        await logActivity({
+            userId: reviewedBy,
+            action: 'DUYỆT',
+            module: 'DỜI LỊCH',
+            targetId: request._id,
+            description: `Đã duyệt đơn dời lịch cho buổi học môn ${request.sessionId?.subject?.name || 'không xác định'}`,
+            details: {
+                note: reviewNote,
+                newSessionId: newSession._id
+            }
+        });
 
         const populated = await RescheduleRequest.findById(request._id)
             .populate({ path: 'sessionId', select: 'date startTime endTime', populate: [{ path: 'classId', select: 'className' }, { path: 'subject', select: 'name' }] })
@@ -200,6 +256,16 @@ exports.approveRescheduleRequest = async (req, res) => {
             data: populated,
             message: 'Đã duyệt đơn xin dời và tạo buổi học mới thành công'
         });
+
+        // Gửi thông báo cho giáo viên
+        sendNotification(
+            request.requestedBy,
+            reviewedBy,
+            'Đã duyệt đơn dời lịch',
+            `Đơn xin dời buổi dạy của bạn môn ${oldSession.subject?.name || ''} vào ngày ${oldSession.date} đã được duyệt.`,
+            'RESCHEDULE'
+        );
+
     } catch (error) {
         await session.abortTransaction();
         session.endSession();
@@ -243,6 +309,25 @@ exports.rejectRescheduleRequest = async (req, res) => {
             data: populated,
             message: 'Đã từ chối đơn xin dời buổi dạy'
         });
+        await Promise.all([
+            sendNotification(
+                request.requestedBy,
+                reviewedBy,
+                'Đơn xin dời lịch bị từ chối',
+                `Đơn xin dời buổi dạy của bạn đã bị từ chối. Lý do: ${reviewNote.trim()}`,
+                'RESCHEDULE'
+            ),
+            logActivity({
+                userId: reviewedBy,
+                action: 'TỪ CHỐI',
+                module: 'DỜI LỊCH',
+                targetId: request._id,
+                description: `Đã từ chối đơn dời lịch`,
+                details: { note: reviewNote.trim() }
+            })
+        ])
+
+        // Gửi thông báo cho giáo viên
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

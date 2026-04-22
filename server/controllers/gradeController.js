@@ -3,6 +3,8 @@ const User = require('../models/User');
 const Class = require('../models/Class');
 const mongoose = require('mongoose');
 const { sendNotification } = require('../utils/notificationHelper');
+const { logActivity } = require('../utils/activityLogger');
+
 // @desc    Nhập hoặc cập nhật điểm cho học sinh
 // @route   POST /api/grades
 exports.updateStudentGrade = async (req, res) => {
@@ -11,9 +13,17 @@ exports.updateStudentGrade = async (req, res) => {
     try {
         const { studentId, subject, term, oralGrade, midtermGrade, finalGrade } = req.body;
 
+        let oldValue = null;
         let grade = await Grade.findOne({ student: studentId, subject, term }).session(session);
 
         if (grade) {
+            // Lưu lại giá trị cũ trước khi cập nhật
+            oldValue = { 
+                oralGrade: grade.oralGrade, 
+                midtermGrade: grade.midtermGrade, 
+                finalGrade: grade.finalGrade 
+            };
+
             grade.oralGrade = oralGrade;
             grade.midtermGrade = midtermGrade;
             grade.finalGrade = finalGrade;
@@ -34,6 +44,19 @@ exports.updateStudentGrade = async (req, res) => {
 
         await session.commitTransaction();
         session.endSession();
+
+        // Ghi log hoạt động
+        await logActivity({
+            userId: req.user.id,
+            action: oldValue ? 'CẬP NHẬT' : 'TẠO',
+            module: 'ĐIỂM SỐ',
+            targetId: grade._id,
+            description: `${oldValue ? 'Cập nhật' : 'Nhập'} điểm môn ${subject} (${term})`,
+            details: { 
+                oldValue, 
+                newValue: { oralGrade, midtermGrade, finalGrade } 
+            }
+        });
 
         sendNotification(
             studentId,

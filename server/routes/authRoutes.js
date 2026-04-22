@@ -2,8 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { register, login, getMe, refreshToken, logout } = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const validate = require('../middleware/validateMiddleware');
+const { registerSchema, loginSchema } = require('../validations/authValidation');
 
-router.post('/register', register);
+router.post('/register', validate(registerSchema), register);
 /**
  * @swagger
  * /api/auth/login:
@@ -40,7 +42,7 @@ router.post('/register', register);
  *       401:
  *         description: Invalid credentials
  */
-router.post('/login', login);
+router.post('/login', validate(loginSchema), login);
 router.get('/me', protect, getMe);
 router.post('/refresh-token', refreshToken);
 router.post('/logout', protect, logout);

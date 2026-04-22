@@ -11,7 +11,7 @@ router.get('/student/attendance', authorize('student'), getStudentAttendance);
 
 // Routes for both teacher and admin
 router.get('/available-teachers', authorize('teacher', 'admin'), getAvailableTeachers);
-router.get('/class/:classId', authorize('teacher', 'admin'), getSessionsByClass);
+router.get('/class/:classId', authorize('teacher', 'admin', 'student'), getSessionsByClass);
 router.get('/:sessionId/students', authorize('teacher', 'admin'), getAttendanceSheet);
 router.post('/:sessionId/attendance', authorize('teacher', 'admin'), submitAttendance);
 

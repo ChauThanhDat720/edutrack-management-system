@@ -41,6 +41,12 @@ app.use('/api/absence', require('./routes/absenceRoutes'));
 app.use('/api/subjects', require('./routes/subjectRoutes'));
 app.use('/api/conducts', require('./routes/conductRoutes'));
 app.use('/api/reschedule', require('./routes/rescheduleRoutes'));
+app.use('/api/activity', require('./routes/activityRoutes'));
+app.use('/api/submission', require('./routes/submissionRoutes'))
+app.use('/api/assignments', require('./routes/assignmentRoutes'))
+app.use('/api/upload', require('./routes/uploadRoutes'))
+
+
 const PORT = process.env.PORT || 5000;
 
 server.listen(PORT, () => {

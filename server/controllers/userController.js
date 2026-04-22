@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const { broadcast } = require('../config/socket');
+const { logActivity } = require('../utils/activityLogger');
 
 // @desc    Lấy tất cả người dùng (có thể lọc theo role: student/teacher)
 // @route   GET /api/users
@@ -89,6 +90,17 @@ exports.createUser = async (req, res) => {
         }
 
         const user = await User.create(req.body);
+
+        // Ghi nhật ký vào ActivityLog
+        await logActivity({
+            userId: req.user.id,
+            action: 'TẠO',
+            module: 'NGƯỜI DÙNG',
+            targetId: user._id,
+            description: `Đã tạo người dùng mới: ${user.name} (${user.role})`,
+            details: { email: user.email, role: user.role }
+        });
+
         broadcast('users_updated', { message: `Tạo người dùng mới: ${user.name}` });
 
         res.status(201).json({

@@ -17,7 +17,7 @@ exports.sendNotification = async (userId, senderId, title, message, type) => {
             title,
             message,
             type,
-            createdAt: notif.createdAt
+            createdAt: notification.createdAt
         });
     } catch (error) {
 
