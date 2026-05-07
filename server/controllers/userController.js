@@ -6,15 +6,23 @@ const { logActivity } = require('../utils/activityLogger');
 // @route   GET /api/users
 exports.getUsers = async (req, res) => {
     try {
-        const { role } = req.query;
-        const filter = role ? { role } : {};
+        const { role, search } = req.query;
+        let filter = role ? { role } : {};
+        
+        if (search) {
+            filter.$or = [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ];
+        }
+
         const page = parseInt(req.query.page) || 1;
         const isPaginationFalse = req.query.pagination === 'false';
         const limit = parseInt(req.query.limit) || 20;
         const option = {
             page: page,
             limit: limit,
-            sort: { createAt: -1 },
+            sort: { createdAt: -1 },
             pagination: !isPaginationFalse
         };
         const result = await User.paginate(filter, option);
@@ -82,14 +90,29 @@ exports.createUser = async (req, res) => {
             return res.status(400).json({ message: 'Email đã tồn tại' });
         }
 
-        // Làm sạch studentDetails: className rỗng → null
+        // Làm sạch studentDetails
         if (req.body.studentDetails) {
             if (!req.body.studentDetails.className) {
                 req.body.studentDetails.className = null;
             }
+            if (!req.body.studentDetails.studentId) {
+                delete req.body.studentDetails.studentId;
+            }
+        }
+
+        if (req.body.teacherDetails) {
+            if (req.body.teacherDetails.assignedClasses === "") {
+                delete req.body.teacherDetails.assignedClasses;
+            }
         }
 
         const user = await User.create(req.body);
+        console.log('DEBUG CREATED USER:', JSON.stringify({
+            id: user._id,
+            email: user.email,
+            role: user.role,
+            passwordHashed: !!user.password
+        }, null, 2));
 
         // Ghi nhật ký vào ActivityLog
         await logActivity({
@@ -108,6 +131,7 @@ exports.createUser = async (req, res) => {
             data: user
         });
     } catch (error) {
+        console.error('LỖI TẠO NGƯỜI DÙNG:', error);
         res.status(400).json({ success: false, message: error.message });
     }
 };

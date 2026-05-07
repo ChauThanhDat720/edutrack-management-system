@@ -3,6 +3,7 @@ const http = require('http');
 const socketConfig = require('./config/socket');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const announcementRoutes = require('./routes/announcementRoutes');
 // Load environment variables
@@ -12,6 +13,20 @@ dotenv.config();
 connectDB();
 
 const app = express();
+
+// Rate Limiting
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 500,
+    message: { message: 'Quá nhiều yêu cầu từ IP này, vui lòng thử lại sau 15 phút.' }
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 5,
+    message: { message: 'Quá nhiều yêu cầu đăng nhập, vui lòng thử lại sau 15 phút.' }
+});
+
 const server = http.createServer(app);
 
 // Initialize Socket.io
@@ -23,6 +38,8 @@ const swaggerSpecs = require('./config/swagger');
 // Middleware
 app.use(cors());
 app.use(express.json());
+// app.use('/api/', globalLimiter);
+// app.use('/api/auth', authLimiter);
 
 // API Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
@@ -45,6 +62,8 @@ app.use('/api/activity', require('./routes/activityRoutes'));
 app.use('/api/submission', require('./routes/submissionRoutes'))
 app.use('/api/assignments', require('./routes/assignmentRoutes'))
 app.use('/api/upload', require('./routes/uploadRoutes'))
+app.use('/api/files', require('./routes/fileRoutes'))
+app.use('/api/curriculums', require('./routes/curriculumRoutes'))
 
 
 const PORT = process.env.PORT || 5000;

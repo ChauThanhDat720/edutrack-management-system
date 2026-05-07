@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { SocketContext } from '../context/SocketContext';
 import api from '../utils/api';
 import {
     CalendarDays, CheckCircle2, XCircle, Filter,
@@ -19,6 +20,7 @@ const ManageReschedule = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [totalPages, setTotalPages] = useState(1);
+    const socket = useContext(SocketContext);
 
     // Modal duyệt / từ chối
     const [selectedItem, setSelectedItem] = useState(null);
@@ -43,6 +45,17 @@ const ManageReschedule = () => {
     useEffect(() => {
         fetchRequests();
     }, [filterStatus, currentPage]);
+
+    // Sockets listener
+    useEffect(() => {
+        if (socket) {
+            socket.on('reschedule_updated', (data) => {
+                console.log('[Socket] Reschedule updated:', data.message);
+                fetchRequests();
+            });
+            return () => socket.off('reschedule_updated');
+        }
+    }, [socket]);
 
     const filtered = requests.filter(r =>
         r.requestedBy?.name?.toLowerCase().includes(searchQuery.toLowerCase())

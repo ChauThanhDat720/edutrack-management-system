@@ -15,17 +15,19 @@ exports.generateSemester = async (classDoc, startDate, endDate) => {
         const dayName = currentDate.format('dddd');
 
         if (scheduleMap[dayName]) {
+            // Lấy giáo viên từ lịch học chi tiết, nếu không có thì lấy GVCN
+            const assignedTeacher = scheduleMap[dayName].teacher || classDoc.teacher;
+            
             // Thêm buổi học vào danh sách tạm thời
             sessions.push({
                 classId: classDoc._id,
                 date: currentDate.toDate(),
                 startTime: scheduleMap[dayName].startTime,
                 endTime: scheduleMap[dayName].endTime,
-                teacher: classDoc.teacher,
+                teacher: assignedTeacher,
                 status: 'scheduled'
             });
         }
-
 
         currentDate.add(1, 'days');
     }

@@ -3,18 +3,18 @@ const SubmissionSchema = new mongoose.Schema({
     assignmentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Assignment',
-        require: true
+        required: [true, 'Thiếu ID bài tập']
     },
     studentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User',
-        required: true
+        required: [true, 'Thiếu ID học sinh']
     },
     workFiles: [{
         url: String,
         name: String,
         type: { type: String, enum: ['file', 'link', 'drive'], default: 'file' },
-        submittedAt: { type: Date, default: Date.now() }
+        submittedAt: { type: Date, default: Date.now }
     }],
     content: String,
     status: {

@@ -39,6 +39,9 @@ const ClassDetail = () => {
     const [submissionFile, setSubmissionFile] = useState(null); // Mock file URL for now
     const [submissions, setSubmissions] = useState([]); // For teachers to view
     const [showViewSubmissionsModal, setShowViewSubmissionsModal] = useState(false);
+    const [showGradeModal, setShowGradeModal] = useState(false);
+    const [selectedSubmission, setSelectedSubmission] = useState(null);
+    const [gradeForm, setGradeForm] = useState({ grade: '', feedback: '' });
 
     const showMessage = (text, type = 'success') => {
         setMessage({ text, type });
@@ -48,7 +51,7 @@ const ClassDetail = () => {
     const fetchData = async () => {
         try {
             setLoading(true);
-            
+
             // Basic data needed by everyone
             const basePromises = [
                 api.get(`/classes/${id}`),
@@ -64,7 +67,7 @@ const ClassDetail = () => {
             }
 
             const results = await Promise.all(basePromises);
-            
+
             setClassData(results[0].data.data);
             setSessions(results[1].data.data);
             setAssignments(results[2].data.data);
@@ -127,6 +130,23 @@ const ClassDetail = () => {
             showMessage('Đã xóa bài tập');
         } catch (err) {
             showMessage('Lỗi khi xóa bài tập', 'error');
+        }
+    };
+
+    const handleGradeSubmission = async (e) => {
+        e.preventDefault();
+        setActionLoading('grade-submission');
+        try {
+            await api.put(`/submissions/${selectedSubmission._id}/grade`, gradeForm);
+            showMessage('Đã chấm điểm thành công!');
+            setShowGradeModal(false);
+            // Refresh submissions list
+            const res = await api.get(`/submissions/assignment/${selectedAssignment._id}`);
+            setSubmissions(res.data.data);
+        } catch (err) {
+            showMessage(err.response?.data?.message || 'Lỗi khi chấm điểm', 'error');
+        } finally {
+            setActionLoading(null);
         }
     };
 
@@ -193,7 +213,7 @@ const ClassDetail = () => {
                 fileName: submissionType === 'file' ? 'Bản nộp tệp' : 'Liên kết nộp bài',
                 type: submissionType
             };
-            
+
             await api.post('/submission', payload);
             showMessage('Nộp bài thành công!');
             setShowSubmitModal(false);
@@ -253,7 +273,10 @@ const ClassDetail = () => {
                     <button onClick={() => navigate('..')} className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"><ArrowLeft size={20} /></button>
                     <div>
                         <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Lớp {classData.className}</h1>
-                        <p className="text-sm text-gray-500 font-medium">GV: {classData.teacher?.name} · Phòng: {classData.room || 'N/A'}</p>
+                        <p className="text-sm text-gray-500 font-medium">GVCN: {classData.teacher?.name} · Phòng: {classData.room || 'N/A'}</p>
+                        {classData.teachers && classData.teachers.length > 1 && (
+                            <p className="text-xs text-gray-400 font-medium mt-1">GV Bộ môn: {classData.teachers.filter(t => t._id !== classData.teacher?._id).map(t => t.name).join(', ')}</p>
+                        )}
                     </div>
                 </div>
                 <div className="flex gap-2">
@@ -350,29 +373,32 @@ const ClassDetail = () => {
                                                         {assignment.points} điểm
                                                     </span>
                                                 </div>
-                                                
+
                                                 {/* Hiển thị tài liệu đính kèm từ giáo viên */}
                                                 {assignment.attachments?.length > 0 && (
                                                     <div className="flex flex-wrap gap-2 mt-3">
-                                                        {assignment.attachments.map((file, idx) => (
-                                                            <a 
-                                                                key={idx} 
-                                                                href={file.url} 
-                                                                target="_blank" 
-                                                                rel="noopener noreferrer"
-                                                                className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-gray-100 rounded-lg text-[10px] font-black text-indigo-600 hover:border-indigo-300 transition-all shadow-sm"
-                                                            >
-                                                                <FileText size={12} />
-                                                                <span className="max-w-[120px] truncate">{file.name}</span>
-                                                            </a>
-                                                        ))}
+                                                        {assignment.attachments.map((file, idx) => {
+                                                            return (
+                                                                <button 
+                                                                    key={idx} 
+                                                                    onClick={() => {
+                                                                        const proxyUrl = `http://localhost:5000/api/files/view?url=${encodeURIComponent(file.url)}`;
+                                                                        window.open(proxyUrl, '_blank', 'noopener,noreferrer');
+                                                                    }}
+                                                                    className="flex items-center gap-1.5 px-2.5 py-1 bg-white border border-gray-100 rounded-lg text-[10px] font-black text-indigo-600 hover:border-indigo-300 transition-all shadow-sm"
+                                                                >
+                                                                    <FileText size={12} />
+                                                                    <span className="max-w-[120px] truncate">{file.name}</span>
+                                                                </button>
+                                                            );
+                                                        })}
                                                     </div>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
                                             {user?.role === 'student' && (
-                                                <button 
+                                                <button
                                                     onClick={() => { setSelectedAssignment(assignment); setShowSubmitModal(true); }}
                                                     className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition shadow-md shadow-indigo-100"
                                                 >
@@ -381,13 +407,13 @@ const ClassDetail = () => {
                                             )}
                                             {(user?.role === 'teacher' || user?.role === 'admin') && (
                                                 <>
-                                                    <button 
+                                                    <button
                                                         onClick={() => viewSubmissions(assignment)}
                                                         className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 border border-gray-200 rounded-xl text-sm font-bold hover:bg-gray-50 transition"
                                                     >
                                                         <Eye size={16} /> Bản nộp
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleDeleteAssignment(assignment._id)}
                                                         className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition"
                                                     >
@@ -431,11 +457,11 @@ const ClassDetail = () => {
                                     <h3 className="font-black text-gray-800">Thêm học sinh</h3>
                                     <div className="mt-4 relative">
                                         <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                        <input 
-                                            type="text" 
-                                            value={searchTerm} 
-                                            onChange={(e) => setSearchTerm(e.target.value)} 
-                                            placeholder="Tìm tên hoặc email..." 
+                                        <input
+                                            type="text"
+                                            value={searchTerm}
+                                            onChange={(e) => setSearchTerm(e.target.value)}
+                                            placeholder="Tìm tên hoặc email..."
                                             className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border-none rounded-xl text-sm focus:ring-2 focus:ring-indigo-500"
                                         />
                                     </div>
@@ -470,23 +496,23 @@ const ClassDetail = () => {
                             <div className="space-y-4">
                                 <div>
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Tiêu đề bài tập</label>
-                                    <input required value={assignmentForm.title} onChange={e => setAssignmentForm({...assignmentForm, title: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
+                                    <input required value={assignmentForm.title} onChange={e => setAssignmentForm({ ...assignmentForm, title: e.target.value })} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Yêu cầu/Mô tả</label>
-                                    <textarea required rows={3} value={assignmentForm.description} onChange={e => setAssignmentForm({...assignmentForm, description: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
+                                    <textarea required rows={3} value={assignmentForm.description} onChange={e => setAssignmentForm({ ...assignmentForm, description: e.target.value })} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Hạn nộp</label>
-                                        <input type="datetime-local" required value={assignmentForm.dueDate} onChange={e => setAssignmentForm({...assignmentForm, dueDate: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
+                                        <input type="datetime-local" required value={assignmentForm.dueDate} onChange={e => setAssignmentForm({ ...assignmentForm, dueDate: e.target.value })} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
                                     </div>
                                     <div>
                                         <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Điểm tối đa</label>
-                                        <input type="number" required value={assignmentForm.points} onChange={e => setAssignmentForm({...assignmentForm, points: e.target.value})} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
+                                        <input type="number" required value={assignmentForm.points} onChange={e => setAssignmentForm({ ...assignmentForm, points: e.target.value })} className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium" />
                                     </div>
                                 </div>
-                                
+
                                 <div>
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Tài liệu đính kèm</label>
                                     <div className="flex flex-wrap gap-2 mb-3">
@@ -494,9 +520,9 @@ const ClassDetail = () => {
                                             <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 text-indigo-700 rounded-xl text-xs font-bold border border-indigo-100">
                                                 <FileText size={14} />
                                                 <span className="max-w-[150px] truncate">{file.name}</span>
-                                                <button 
+                                                <button
                                                     type="button"
-                                                    onClick={() => setAssignmentForm(prev => ({...prev, attachments: prev.attachments.filter((_, i) => i !== idx)}))}
+                                                    onClick={() => setAssignmentForm(prev => ({ ...prev, attachments: prev.attachments.filter((_, i) => i !== idx) }))}
                                                     className="text-indigo-400 hover:text-red-500 transition-colors"
                                                 >
                                                     <X size={14} />
@@ -504,14 +530,14 @@ const ClassDetail = () => {
                                             </div>
                                         ))}
                                     </div>
-                                    <div 
+                                    <div
                                         className={`border-2 border-dashed rounded-2xl p-4 text-center cursor-pointer transition-colors ${assignmentUploading ? 'bg-gray-100 border-gray-200' : 'bg-gray-50 border-gray-200 hover:border-indigo-400'}`}
                                         onClick={() => !assignmentUploading && document.getElementById('assign-file-upload').click()}
                                     >
-                                        <input 
-                                            id="assign-file-upload" 
-                                            type="file" 
-                                            className="hidden" 
+                                        <input
+                                            id="assign-file-upload"
+                                            type="file"
+                                            className="hidden"
                                             onChange={handleAssignmentFileUpload}
                                             disabled={assignmentUploading}
                                         />
@@ -542,15 +568,15 @@ const ClassDetail = () => {
                             </div>
                             <button onClick={() => setShowSubmitModal(false)} className="text-gray-400 hover:text-gray-600"><X size={24} /></button>
                         </div>
-                        
+
                         <div className="flex bg-gray-100 p-1 rounded-2xl mb-6">
-                            <button 
+                            <button
                                 onClick={() => setSubmissionType('file')}
                                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${submissionType === 'file' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
                             >
                                 Nộp tệp
                             </button>
-                            <button 
+                            <button
                                 onClick={() => setSubmissionType('link')}
                                 className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${submissionType === 'link' ? 'bg-white text-indigo-600 shadow-sm' : 'text-gray-500'}`}
                             >
@@ -560,14 +586,14 @@ const ClassDetail = () => {
 
                         <form onSubmit={handleSubmitWork} className="space-y-6">
                             {submissionType === 'file' ? (
-                                <div 
+                                <div
                                     className={`border-2 border-dashed rounded-3xl p-10 text-center transition-colors cursor-pointer group bg-gray-50 ${submissionFile ? 'border-green-400' : 'border-gray-200 hover:border-indigo-400'}`}
                                     onClick={() => !uploading && document.getElementById('file-upload').click()}
                                 >
-                                    <input 
-                                        id="file-upload" 
-                                        type="file" 
-                                        className="hidden" 
+                                    <input
+                                        id="file-upload"
+                                        type="file"
+                                        className="hidden"
                                         onChange={handleFileUpload}
                                         disabled={uploading}
                                     />
@@ -584,9 +610,9 @@ const ClassDetail = () => {
                             ) : (
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block">Liên kết (Google Drive, Github, vv.)</label>
-                                    <input 
-                                        type="url" 
-                                        required 
+                                    <input
+                                        type="url"
+                                        required
                                         placeholder="https://..."
                                         value={submissionLink}
                                         onChange={(e) => setSubmissionLink(e.target.value)}
@@ -595,8 +621,8 @@ const ClassDetail = () => {
                                 </div>
                             )}
 
-                            <button 
-                                disabled={uploading || actionLoading === 'submit-work' || (submissionType === 'file' ? !submissionFile : !submissionLink)} 
+                            <button
+                                disabled={uploading || actionLoading === 'submit-work' || (submissionType === 'file' ? !submissionFile : !submissionLink)}
                                 className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition shadow-xl shadow-indigo-100 disabled:opacity-50"
                             >
                                 {actionLoading === 'submit-work' ? 'Đang nộp...' : 'Xác nhận nộp bài'}
@@ -639,18 +665,28 @@ const ClassDetail = () => {
                                                         {sub.status === 'late' ? 'Nộp muộn' : 'Đã nộp'}
                                                     </span>
                                                     <div className="flex gap-1">
-                                                        {sub.workFiles.map((file, fIdx) => (
-                                                            <a 
-                                                                key={fIdx}
-                                                                href={file.url} 
-                                                                target="_blank" 
-                                                                rel="noreferrer" 
-                                                                title={file.name}
-                                                                className="p-2 bg-white border border-gray-100 rounded-xl shadow-sm text-indigo-600 hover:bg-indigo-50 transition"
-                                                            >
-                                                                {file.type === 'link' ? <Search size={16} /> : <Eye size={16} />}
-                                                            </a>
-                                                        ))}
+                                                        {sub.workFiles.map((file, fIdx) => {
+                                                            return (
+                                                                <button 
+                                                                    key={fIdx}
+                                                                    onClick={() => {
+                                                                        const proxyUrl = `http://localhost:5000/api/files/view?url=${encodeURIComponent(file.url)}`;
+                                                                        window.open(proxyUrl, '_blank', 'noopener,noreferrer');
+                                                                    }}
+                                                                    title={file.name}
+                                                                    className="p-2 bg-white border border-gray-100 rounded-xl shadow-sm text-indigo-600 hover:bg-indigo-50 transition"
+                                                                >
+                                                                    {file.type === 'link' ? <Search size={16} /> : <Eye size={16} />}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                        <button
+                                                            onClick={() => { setSelectedSubmission(sub); setShowGradeModal(true); setGradeForm({ grade: sub.grade || '', feedback: sub.feedback || '' }); }}
+                                                            className="p-2 bg-indigo-600 rounded-xl shadow-md text-white hover:bg-indigo-700 transition"
+                                                            title="Chấm điểm"
+                                                        >
+                                                            <CheckCircle size={16} />
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -675,32 +711,73 @@ const ClassDetail = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="md:col-span-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Môn học</label>
-                                    <select required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.subjectId} onChange={e => setSessionForm({...sessionForm, subjectId: e.target.value})}>
+                                    <select required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.subjectId} onChange={e => setSessionForm({ ...sessionForm, subjectId: e.target.value })}>
                                         <option value="">-- Chọn môn --</option>
                                         {subjects.map(sub => <option key={sub._id} value={sub._id}>{sub.name}</option>)}
                                     </select>
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Ngày dạy</label>
-                                    <input type="date" required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.date} onChange={e => setSessionForm({...sessionForm, date: e.target.value})} />
+                                    <input type="date" required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.date} onChange={e => setSessionForm({ ...sessionForm, date: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Bắt đầu</label>
-                                    <input type="time" required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.startTime} onChange={e => setSessionForm({...sessionForm, startTime: e.target.value})} />
+                                    <input type="time" required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.startTime} onChange={e => setSessionForm({ ...sessionForm, startTime: e.target.value })} />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Kết thúc</label>
-                                    <input type="time" required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.endTime} onChange={e => setSessionForm({...sessionForm, endTime: e.target.value})} />
+                                    <input type="time" required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.endTime} onChange={e => setSessionForm({ ...sessionForm, endTime: e.target.value })} />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Giáo viên</label>
-                                    <select required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.teacherId} onChange={e => setSessionForm({...sessionForm, teacherId: e.target.value})}>
+                                    <select required className="w-full p-3.5 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none" value={sessionForm.teacherId} onChange={e => setSessionForm({ ...sessionForm, teacherId: e.target.value })}>
                                         <option value="">-- Chọn giáo viên --</option>
                                         {allUsers.filter(u => u.role === 'teacher').map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
                                     </select>
                                 </div>
                             </div>
                             <button className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition shadow-xl shadow-indigo-100">Lưu lịch học</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {showGradeModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-8 animate-in zoom-in-95">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-xl font-black text-gray-800">Chấm điểm</h3>
+                            <button onClick={() => setShowGradeModal(false)}><X size={24} /></button>
+                        </div>
+                        <form onSubmit={handleGradeSubmission} className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Điểm số (thang 10)</label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="10"
+                                    step="0.1"
+                                    required
+                                    value={gradeForm.grade}
+                                    onChange={e => setGradeForm({ ...gradeForm, grade: e.target.value })}
+                                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">Nhận xét</label>
+                                <textarea
+                                    rows="3"
+                                    value={gradeForm.feedback}
+                                    onChange={e => setGradeForm({ ...gradeForm, feedback: e.target.value })}
+                                    className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium text-sm"
+                                ></textarea>
+                            </div>
+                            <button
+                                disabled={actionLoading === 'grade-submission'}
+                                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black hover:bg-indigo-700 transition shadow-xl shadow-indigo-100 disabled:opacity-50"
+                            >
+                                {actionLoading === 'grade-submission' ? 'Đang lưu...' : 'Lưu điểm'}
+                            </button>
                         </form>
                     </div>
                 </div>

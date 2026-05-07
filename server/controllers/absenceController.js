@@ -1,17 +1,29 @@
 const Absence = require('../models/absenceRequest');
 const User = require('../models/User');
+const Session = require('../models/Session');
 const { authorize, protect } = require('../middleware/authMiddleware');
 /// desc create
 /// router POST /api/Absence
 exports.createAbsence = async (req, res) => {
     try {
-        const { reason, date, } = req.body;
+        const { reason, sessionId } = req.body;
+
+        if (!sessionId) {
+            return res.status(400).json({ success: false, message: "Vui lòng chọn buổi học (sessionId)" });
+        }
+
+        const session = await Session.findById(sessionId);
+        if (!session) {
+            return res.status(404).json({ success: false, message: "Không tìm thấy buổi học" });
+        }
+
         const absence = await Absence.create({
+            sessionId: session._id,
             student: req.user.id,
             reason,
-            date,
+            date: session.date,
         });
-        res.status(200).json({
+        res.status(201).json({
             success: true,
             data: absence
         });

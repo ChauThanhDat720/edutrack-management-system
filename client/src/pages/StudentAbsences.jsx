@@ -10,8 +10,10 @@ const StudentAbsences = () => {
     const [showReplyModal, setShowReplyModal] = useState(false);
     const [selectedId, setSelectedId] = useState(null);
     const [replyContent, setReplyContent] = useState('');
+    const [upcomingSessions, setUpcomingSessions] = useState([]);
+    const [loadingSessions, setLoadingSessions] = useState(false);
     const [formData, setFormData] = useState({
-        date: '',
+        sessionId: '',
         reason: ''
     });
     const [submitting, setSubmitting] = useState(false);
@@ -29,8 +31,29 @@ const StudentAbsences = () => {
         }
     };
 
+    const fetchUpcomingSessions = async () => {
+        try {
+            setLoadingSessions(true);
+            const today = new Date();
+            const future = new Date();
+            future.setDate(future.getDate() + 30); // Lấy lịch 30 ngày tới
+            
+            const startDate = today.toISOString().split('T')[0];
+            const endDate = future.toISOString().split('T')[0];
+            
+            const res = await api.get(`/sessions/student/schedule?startDate=${startDate}&endDate=${endDate}`);
+            // Lọc ra các buổi chưa diễn ra hoặc diễn ra trong tương lai (dựa trên startTime có thể phức tạp hơn, nhưng date là đủ cho demo)
+            setUpcomingSessions(res.data.data || []);
+        } catch (error) {
+            console.error('Không thể tải lịch học', error);
+        } finally {
+            setLoadingSessions(false);
+        }
+    };
+
     useEffect(() => {
         fetchMyAbsences();
+        fetchUpcomingSessions();
     }, []);
 
     const handleChange = (e) => {
@@ -44,7 +67,7 @@ const StudentAbsences = () => {
             await api.post('/absence', formData);
             toast.success('Đã gửi đơn xin nghỉ phép!');
             setShowModal(false);
-            setFormData({ date: '', reason: '' });
+            setFormData({ sessionId: '', reason: '' });
             fetchMyAbsences();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Gửi đơn thất bại');
@@ -227,15 +250,26 @@ const StudentAbsences = () => {
 
                         <form onSubmit={handleSubmit} className="p-6 space-y-5">
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Ngày xin nghỉ</label>
-                                <input
-                                    type="date"
-                                    name="date"
+                                <label className="block text-sm font-bold text-slate-700 mb-1.5">Buổi học xin nghỉ</label>
+                                <select
+                                    name="sessionId"
                                     required
-                                    value={formData.date}
+                                    value={formData.sessionId}
                                     onChange={handleChange}
+                                    disabled={loadingSessions}
                                     className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none"
-                                />
+                                >
+                                    <option value="">-- Chọn buổi học --</option>
+                                    {upcomingSessions.length > 0 ? (
+                                        upcomingSessions.map(session => (
+                                            <option key={session._id} value={session._id}>
+                                                {new Date(session.date).toLocaleDateString('vi-VN')} ({session.startTime} - {session.endTime}) - {session.subject?.name}
+                                            </option>
+                                        ))
+                                    ) : (
+                                        <option value="" disabled>Không có buổi học nào sắp tới</option>
+                                    )}
+                                </select>
                             </div>
 
                             <div>

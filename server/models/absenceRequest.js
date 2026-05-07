@@ -1,5 +1,10 @@
 const mongoose = require('mongoose');
 const absenceSchema = new mongoose.Schema({
+    sessionId: {
+        type: mongoose.Schema.ObjectId,
+        ref: 'Session',
+        required: true
+    },
     student: { type: mongoose.Schema.ObjectId, ref: 'User', required: true },
     date: { type: Date, required: true },
     reason: {

@@ -1,20 +1,18 @@
-
 const mongoose = require('mongoose');
 const mongoosePaginate = require('mongoose-paginate-v2');
 const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
-    name: { type: String, required: [true, 'Please add a name'] },
+    name: { type: String, required: [true, 'Vui lòng nhập tên'] },
     email: {
         type: String,
         index: true,
         unique: true,
-        required: [true, 'Please add an email'],
-        unique: true,
-        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Please add a valid email']
+        required: [true, 'Vui lòng nhập email'],
+        match: [/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/, 'Vui lòng nhập email hợp lệ']
     },
-    password: { type: String, required: [true, 'Please add a password'], minlength: 6, select: false },
-    role: { type: String, enum: ['admin', 'teacher', 'student'], default: 'student' },
+    password: { type: String, required: [true, 'Vui lòng nhập mật khẩu'], minlength: [6, 'Mật khẩu phải có ít nhất 6 ký tự'], select: false },
+    role: { type: String, enum: { values: ['admin', 'teacher', 'student'], message: 'Quyền không hợp lệ' }, default: 'student' },
     profile: {
         phoneNumber: String,
         address: String,
@@ -29,13 +27,17 @@ const userSchema = new mongoose.Schema({
     },
     teacherDetails: {
         subject: String,
-        assignedClasses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }]
+        assignedClasses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Class' }],
+        maxClasses: { type: Number, default: 2 },
+        allowedGrades: [{ type: Number }]
     },
     refreshToken: { type: String }
 }, { timestamps: true });
 
 userSchema.pre('save', async function () {
-    if (!this.isModified('password')) return;
+    if (!this.password || !this.isModified('password')) {
+        return;
+    }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
 });

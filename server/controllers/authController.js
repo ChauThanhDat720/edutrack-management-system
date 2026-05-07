@@ -25,7 +25,7 @@ exports.register = async (req, res) => {
         const userExists = await User.findOne({ email });
 
         if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
+            return res.status(400).json({ message: 'Người dùng đã tồn tại' });
         }
 
 
@@ -55,7 +55,7 @@ exports.register = async (req, res) => {
                 refreshToken
             });
         } else {
-            res.status(400).json({ message: 'Invalid user data' });
+            res.status(400).json({ message: 'Dữ liệu người dùng không hợp lệ' });
         }
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -73,13 +73,13 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email }).select('+password');
 
         if (!user) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Thông tin đăng nhập không chính xác' });
         }
 
         const isMatch = await user.matchPassword(password);
 
         if (!isMatch) {
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({ message: 'Thông tin đăng nhập không chính xác' });
         }
 
         const token = generateAccessToken(user._id);
@@ -109,20 +109,20 @@ exports.refreshToken = async (req, res) => {
         const { refreshToken } = req.body;
 
         if (!refreshToken) {
-            return res.status(401).json({ message: 'No refresh token provided' });
+            return res.status(401).json({ message: 'Không tìm thấy Refresh Token' });
         }
 
         let decoded;
         try {
             decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET || process.env.JWT_SECRET);
         } catch (error) {
-            return res.status(403).json({ message: 'Invalid refresh token' });
+            return res.status(403).json({ message: 'Refresh Token không hợp lệ' });
         }
 
         const user = await User.findById(decoded.id);
 
         if (!user || user.refreshToken !== refreshToken) {
-            return res.status(403).json({ message: 'Refresh token is invalid or expired in DB' });
+            return res.status(403).json({ message: 'Refresh Token không hợp lệ hoặc đã hết hạn' });
         }
 
         const newToken = generateAccessToken(user._id);

@@ -1,7 +1,7 @@
+import React, { useState, useEffect, useContext } from 'react';
 import { Bell, Check, Clock, X } from 'lucide-react';
 import notificationService from '../utils/notificationService';
 import { SocketContext } from '../context/SocketContext';
-import { useContext } from 'react';
 
 const NotificationList = ({ onClose }) => {
     const [notifications, setNotifications] = useState([]);

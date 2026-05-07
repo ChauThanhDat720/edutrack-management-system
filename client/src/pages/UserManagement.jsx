@@ -13,7 +13,7 @@ const CreateUserModal = ({ onClose, onCreated }) => {
         password: '',
         role: 'student',
         studentDetails: { studentId: '', className: '' },
-        teacherDetails: { subject: '' }
+        teacherDetails: { subject: '', maxClasses: 2, allowedGrades: '' }
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -22,8 +22,8 @@ const CreateUserModal = ({ onClose, onCreated }) => {
         const { name, value } = e.target;
         if (name === 'studentId' || name === 'className') {
             setFormData({ ...formData, studentDetails: { ...formData.studentDetails, [name]: value } });
-        } else if (name === 'subject') {
-            setFormData({ ...formData, teacherDetails: { ...formData.teacherDetails, subject: value } });
+        } else if (name === 'subject' || name === 'maxClasses' || name === 'allowedGrades') {
+            setFormData({ ...formData, teacherDetails: { ...formData.teacherDetails, [name]: value } });
         } else {
             setFormData({ ...formData, [name]: value });
         }
@@ -34,7 +34,11 @@ const CreateUserModal = ({ onClose, onCreated }) => {
         setLoading(true);
         setError('');
         try {
-            await api.post('/users', formData);
+            let finalFormData = { ...formData };
+            if (finalFormData.role === 'teacher' && finalFormData.teacherDetails.allowedGrades) {
+                finalFormData.teacherDetails.allowedGrades = finalFormData.teacherDetails.allowedGrades.split(',').map(g => parseInt(g.trim())).filter(g => !isNaN(g));
+            }
+            await api.post('/users', finalFormData);
             onCreated();
             onClose();
         } catch (err) {
@@ -151,17 +155,41 @@ const CreateUserModal = ({ onClose, onCreated }) => {
                                 </div>
                             </>
                         ) : (
-                            <div className="col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Môn Học Giảng Dạy</label>
-                                <input
-                                    type="text"
-                                    name="subject"
-                                    value={formData.teacherDetails.subject}
-                                    onChange={handleChange}
-                                    placeholder="Toán, Lý, Hóa..."
-                                    className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                            </div>
+                            <>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Môn Học Giảng Dạy</label>
+                                    <input
+                                        type="text"
+                                        name="subject"
+                                        value={formData.teacherDetails.subject}
+                                        onChange={handleChange}
+                                        placeholder="Toán, Lý, Hóa..."
+                                        className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Số lớp tối đa</label>
+                                    <input
+                                        type="number"
+                                        name="maxClasses"
+                                        min="1"
+                                        value={formData.teacherDetails.maxClasses}
+                                        onChange={handleChange}
+                                        className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                                <div className="col-span-1">
+                                    <label className="block text-sm font-medium text-gray-700 mb-1">Khối được dạy (cách nhau dấu phẩy)</label>
+                                    <input
+                                        type="text"
+                                        name="allowedGrades"
+                                        value={formData.teacherDetails.allowedGrades}
+                                        onChange={handleChange}
+                                        placeholder="Ví dụ: 10, 11"
+                                        className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    />
+                                </div>
+                            </>
                         )}
                     </div>
 

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Users, BookOpen, X, ChevronRight, GraduationCap } from 'lucide-react';
+import { Plus, Users, BookOpen, X, ChevronRight, GraduationCap, Calendar } from 'lucide-react';
 import api from '../utils/api';
 import { AuthContext } from '../context/AuthContext';
 import ExcelImportButton from '../components/ExcelImportButton';
+import CurriculumModal from '../components/CurriculumModal';
 
 // ─── Create/Edit Class Modal ──────────────────────────────────────────────────
 const CreateClassModal = ({ onClose, onCreated, teachers, initialData = null }) => {
     const isEdit = !!initialData;
     const [className, setClassName] = useState(initialData?.className || '');
     const [teacher, setTeacher] = useState(initialData?.teacher?._id || '');
+    const [selectedTeachers, setSelectedTeachers] = useState(initialData?.teachers?.map(t => t._id) || (initialData?.teacher?._id ? [initialData.teacher._id] : []));
     const [room, setRoom] = useState(initialData?.room || '');
     const [schedule, setSchedule] = useState(initialData?.schedule || []);
 
@@ -19,7 +21,7 @@ const CreateClassModal = ({ onClose, onCreated, teachers, initialData = null }) 
     const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
     const addScheduleRow = () => {
-        setSchedule([...schedule, { dayOfWeek: 'Monday', startTime: '07:30', endTime: '09:00' }]);
+        setSchedule([...schedule, { dayOfWeek: 'Monday', startTime: '07:30', endTime: '09:00', teacher: teacher || '' }]);
     };
 
     const removeScheduleRow = (index) => {
@@ -37,7 +39,7 @@ const CreateClassModal = ({ onClose, onCreated, teachers, initialData = null }) 
         setLoading(true);
         setError('');
         try {
-            const payload = { className, teacher, room, schedule };
+            const payload = { className, teacher, teachers: selectedTeachers, room, schedule };
             if (isEdit) {
                 await api.put(`/classes/${initialData._id}`, payload);
             } else {
@@ -97,6 +99,25 @@ const CreateClassModal = ({ onClose, onCreated, teachers, initialData = null }) 
                             </select>
                         </div>
 
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Danh Sách GV Giảng Dạy <span className="text-red-500">*</span></label>
+                            <select
+                                multiple
+                                required
+                                value={selectedTeachers}
+                                onChange={(e) => setSelectedTeachers(Array.from(e.target.selectedOptions, option => option.value))}
+                                className="block w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                size={3}
+                            >
+                                {teachers.map((t) => (
+                                    <option key={t._id} value={t._id}>
+                                        {t.name} {t.teacherDetails?.subject ? `(${t.teacherDetails.subject})` : ''}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-[10px] text-gray-500 mt-1">Giữ Ctrl/Cmd để chọn nhiều.</p>
+                        </div>
+
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">Phòng Học</label>
                             <input
@@ -153,6 +174,18 @@ const CreateClassModal = ({ onClose, onCreated, teachers, initialData = null }) 
                                                 className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-400"
                                             />
                                         </div>
+
+                                        <select
+                                            value={s.teacher || ''}
+                                            onChange={(e) => updateScheduleRow(idx, 'teacher', e.target.value)}
+                                            className="border border-gray-300 rounded-md px-2 py-1.5 text-xs focus:ring-1 focus:ring-blue-400 flex-1 min-w-[120px]"
+                                            required
+                                        >
+                                            <option value="">-- Chọn GV dạy --</option>
+                                            {teachers.filter(t => selectedTeachers.includes(t._id)).map(t => (
+                                                <option key={t._id} value={t._id}>{t.name} ({t.teacherDetails?.subject || 'N/A'})</option>
+                                            ))}
+                                        </select>
 
                                         <button
                                             type="button"
@@ -251,6 +284,7 @@ const ClassManagement = () => {
 
     const navigate = useNavigate();
     const [showCreateModal, setShowCreateModal] = useState(false);
+    const [showCurriculumModal, setShowCurriculumModal] = useState(false);
     const [selectedClass, setSelectedClass] = useState(null);
 
     const handleEditClass = (cls) => {
@@ -270,6 +304,20 @@ const ClassManagement = () => {
             alert(res.data.message);
         } catch (err) {
             alert(err.response?.data?.message || 'Không thể tạo lịch học');
+        }
+    };
+
+    const handleAutoSchedule = async () => {
+        if (!window.confirm('Xếp lịch tự động cho TẤT CẢ các lớp học? Lịch hiện tại của các lớp có thể bị thay đổi.')) return;
+        setLoading(true);
+        try {
+            const res = await api.post('/classes/auto-schedule');
+            alert(res.data.message);
+            fetchClasses(); // Refresh
+        } catch (err) {
+            alert(err.response?.data?.message || 'Lỗi xếp lịch tự động');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -294,11 +342,18 @@ const ClassManagement = () => {
     useEffect(() => {
         const fetchAll = async () => {
             setLoading(true);
-            await Promise.all([fetchClasses(), fetchTeachers()]);
+            if (user?.role === 'admin') {
+                await Promise.all([fetchClasses(), fetchTeachers()]);
+            } else {
+                await fetchClasses();
+            }
             setLoading(false);
         };
-        fetchAll();
-    }, []);
+        
+        if (user) {
+            fetchAll();
+        }
+    }, [user]);
 
     if (loading) {
         return (
@@ -319,6 +374,20 @@ const ClassManagement = () => {
                 </div>
                 {user?.role === 'admin' && (
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => setShowCurriculumModal(true)}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+                        >
+                            <BookOpen size={16} />
+                            Chương Trình Học
+                        </button>
+                        <button
+                            onClick={handleAutoSchedule}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium rounded-lg shadow-sm transition-colors"
+                        >
+                            <Calendar size={16} />
+                            Xếp Lịch Tự Động
+                        </button>
                         <ExcelImportButton onImportSuccess={fetchClasses} />
                         <button
                             onClick={() => setShowCreateModal(true)}
@@ -370,13 +439,18 @@ const ClassManagement = () => {
                                         {cls.teacher?.name?.charAt(0).toUpperCase() || '?'}
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Giáo viên</p>
+                                        <p className="text-xs text-gray-400">GVCN</p>
                                         <p className="text-sm font-semibold text-gray-800">{cls.teacher?.name || 'Chưa có'}</p>
                                         {cls.teacher?.teacherDetails?.subject && (
                                             <p className="text-xs text-gray-500">Môn: {cls.teacher.teacherDetails.subject}</p>
                                         )}
                                     </div>
                                 </div>
+                                {cls.teachers && cls.teachers.length > 1 && (
+                                    <div className="text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded px-2 py-1">
+                                        + {cls.teachers.length - 1} GV Bộ môn ({cls.teachers.filter(t => t._id !== cls.teacher?._id).map(t => t.name).join(', ')})
+                                    </div>
+                                )}
 
                                 {/* Student Count */}
                                 <div className="flex items-center gap-2 text-gray-600">
@@ -424,6 +498,10 @@ const ClassManagement = () => {
                     onClose={handleCloseModal}
                     onCreated={fetchClasses}
                 />
+            )}
+
+            {showCurriculumModal && (
+                <CurriculumModal onClose={() => setShowCurriculumModal(false)} />
             )}
 
         </div>

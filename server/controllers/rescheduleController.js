@@ -3,6 +3,7 @@ const RescheduleRequest = require('../models/RescheduleRequest');
 const mongoose = require('mongoose');
 const { logActivity } = require('../utils/activityLogger');
 const { sendNotification } = require('../utils/notificationHelper');
+const { broadcast } = require('../config/socket');
 // @desc    Giáo viên tạo đơn xin dời buổi dạy
 // @route   POST /api/reschedule
 // @access  Teacher
@@ -87,6 +88,12 @@ exports.createRescheduleRequest = async (req, res) => {
             success: true,
             data: populated,
             message: 'Đơn xin dời buổi dạy đã được gửi thành công, đang chờ duyệt'
+        });
+
+        // Thông báo real-time cho admin
+        broadcast('reschedule_updated', {
+            message: `Có đơn dời lịch mới từ giáo viên ${populated.requestedBy?.name}`,
+            type: 'NEW_REQUEST'
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -188,7 +195,15 @@ exports.approveRescheduleRequest = async (req, res) => {
         const { reviewNote } = req.body;
         const reviewedBy = req.user.id;
 
-        const request = await RescheduleRequest.findById(id).populate('sessionId').session(session);
+        const request = await RescheduleRequest.findById(id)
+            .populate({
+                path: 'sessionId',
+                populate: [
+                    { path: 'subject', select: 'name' },
+                    { path: 'classId', select: 'className' }
+                ]
+            })
+            .session(session);
         if (!request) {
             await session.abortTransaction();
             session.endSession();
@@ -221,6 +236,7 @@ exports.approveRescheduleRequest = async (req, res) => {
 
 
         await Session.findByIdAndUpdate(oldSession._id, { status: 'cancelled' }, { session });
+        // await Session.findByIdAndDelete(oldSession._id, { session });
 
 
         request.status = 'approved';
@@ -238,7 +254,7 @@ exports.approveRescheduleRequest = async (req, res) => {
             action: 'DUYỆT',
             module: 'DỜI LỊCH',
             targetId: request._id,
-            description: `Đã duyệt đơn dời lịch cho buổi học môn ${request.sessionId?.subject?.name || 'không xác định'}`,
+            description: `Đã duyệt đơn dời lịch môn ${request.sessionId?.subject?.name || 'không xác định'} - Lớp ${request.sessionId?.classId?.className || 'không xác định'} (Ngày gốc: ${request.sessionId?.date ? new Date(request.sessionId.date).toLocaleDateString('vi-VN') : 'không xác định'})`,
             details: {
                 note: reviewNote,
                 newSessionId: newSession._id
@@ -257,12 +273,18 @@ exports.approveRescheduleRequest = async (req, res) => {
             message: 'Đã duyệt đơn xin dời và tạo buổi học mới thành công'
         });
 
+        // Thông báo real-time
+        broadcast('reschedule_updated', {
+            message: `Đơn dời lịch của giáo viên ${populated.requestedBy?.name} đã được duyệt`,
+            type: 'APPROVED'
+        });
+
         // Gửi thông báo cho giáo viên
         sendNotification(
             request.requestedBy,
             reviewedBy,
             'Đã duyệt đơn dời lịch',
-            `Đơn xin dời buổi dạy của bạn môn ${oldSession.subject?.name || ''} vào ngày ${oldSession.date} đã được duyệt.`,
+            `Đơn xin dời buổi dạy của bạn môn ${oldSession.subject?.name || 'không xác định'} vào ngày ${oldSession.date ? new Date(oldSession.date).toLocaleDateString('vi-VN') : ''} đã được duyệt.`,
             'RESCHEDULE'
         );
 
@@ -286,7 +308,14 @@ exports.rejectRescheduleRequest = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Vui lòng nhập lý do từ chối' });
         }
 
-        const request = await RescheduleRequest.findById(id);
+        const request = await RescheduleRequest.findById(id)
+            .populate({
+                path: 'sessionId',
+                populate: [
+                    { path: 'subject', select: 'name' },
+                    { path: 'classId', select: 'className' }
+                ]
+            });
         if (!request) {
             return res.status(404).json({ success: false, message: 'Không tìm thấy đơn xin dời' });
         }
@@ -309,6 +338,12 @@ exports.rejectRescheduleRequest = async (req, res) => {
             data: populated,
             message: 'Đã từ chối đơn xin dời buổi dạy'
         });
+
+        // Thông báo real-time
+        broadcast('reschedule_updated', {
+            message: `Đơn dời lịch của giáo viên ${populated.requestedBy?.name} đã bị từ chối`,
+            type: 'REJECTED'
+        });
         await Promise.all([
             sendNotification(
                 request.requestedBy,
@@ -322,7 +357,7 @@ exports.rejectRescheduleRequest = async (req, res) => {
                 action: 'TỪ CHỐI',
                 module: 'DỜI LỊCH',
                 targetId: request._id,
-                description: `Đã từ chối đơn dời lịch`,
+                description: `Đã từ chối đơn dời lịch môn ${request.sessionId?.subject?.name || 'không xác định'} - Lớp ${request.sessionId?.classId?.className || 'không xác định'} (Ngày gốc: ${request.sessionId?.date ? new Date(request.sessionId.date).toLocaleDateString('vi-VN') : 'không xác định'})`,
                 details: { note: reviewNote.trim() }
             })
         ])

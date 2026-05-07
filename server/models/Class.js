@@ -11,6 +11,10 @@ const classSchema = new mongoose.Schema({
         ref: 'User',
         required: [true, 'Please assign a teacher to this class']
     },
+    teachers: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+    }],
     students: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'
@@ -31,6 +35,11 @@ const classSchema = new mongoose.Schema({
         },
         endTime: {
             type: String,
+            required: true
+        },
+        teacher: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
             required: true
         }
     }]

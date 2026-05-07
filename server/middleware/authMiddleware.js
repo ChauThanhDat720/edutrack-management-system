@@ -17,27 +17,33 @@ const protect = async (req, res, next) => {
 
             // Get user from the token
             req.user = await User.findById(decoded.id).select('-password');
+            
+            if (!req.user) {
+                return res.status(401).json({ message: 'Không tìm thấy người dùng' });
+            }
 
             next();
         } catch (error) {
             console.error(error);
-            res.status(401).json({ message: 'Not authorized, token failed' });
+            return res.status(401).json({ message: 'Truy cập bị từ chối, token không hợp lệ' });
         }
-    }
-
-    if (!token) {
-        res.status(401).json({ message: 'Not authorized, no token' });
+    } else {
+        return res.status(401).json({ message: 'Truy cập bị từ chối, không có token' });
     }
 };
 
 const authorize = (...roles) => {
     return (req, res, next) => {
-        if (!roles.includes(req.user.role)) {
-            return res.status(403).json({
-                message: `User role ${req.user.role} is not authorized to access this route`
-            });
+        const userRole = req.user.role ? req.user.role.toLowerCase() : '';
+        console.log(`DEBUG AUTHORIZE: User Role: [${req.user.role}] | Allowed Roles: [${roles.join(', ')}]`);
+        
+        if (userRole === 'admin' || roles.includes(req.user.role)) {
+            return next();
         }
-        next();
+
+        return res.status(403).json({
+            message: `Quyền hạn ${req.user.role} không được phép truy cập đường dẫn này`
+        });
     };
 };
 

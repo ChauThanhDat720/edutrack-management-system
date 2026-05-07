@@ -7,7 +7,8 @@ const {
     addStudent,
     manageStudents,
     updateClass,
-    generateClassSessions
+    generateClassSessions,
+    autoScheduleClasses
 } = require('../controllers/classController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
@@ -64,6 +65,10 @@ const { protect, authorize } = require('../middleware/authMiddleware');
 router.route('/')
     .get(protect, getClasses)
     .post(protect, authorize('admin'), createClass);
+
+// POST /api/classes/auto-schedule - Auto generate schedule for all classes
+router.route('/auto-schedule')
+    .post(protect, authorize('admin'), autoScheduleClasses);
 
 /**
  * @swagger
